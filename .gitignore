@@ -1,0 +1,22 @@
+node_modules
+.env
+.env.local
+.env*.local
+dist
+.next
+*.log
+.DS_Store
+.turbo
+uploads/
+# Payment screenshots and the local development database (pnpm db:local)
+apps/web/storage/
+apps/web/.pgdata/
+apps/web/.tmp/
+.vercel
+*.tsbuildinfo
+
+# Personal Claude Code settings (may contain local commands)
+.claude/settings.local.json
+
+# BDM logins written by pnpm import:legacy-crm
+legacy-bdm-logins*.csv

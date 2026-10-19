@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Voice Tunes India</string>
+    <string name="recorder_accessibility_label">Voice Tunes India call recorder</string>
+    <string name="recorder_accessibility_description">Lets Voice Tunes India record your calls with CRM leads, so they can be turned into text in the CRM. It does not read or change anything on your screen.</string>
+</resources>

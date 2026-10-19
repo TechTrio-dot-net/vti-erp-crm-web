@@ -1,0 +1,23 @@
+{
+  "name": "voice-tunes-india",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev db:local",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "db:seed": "pnpm --filter @voicetunes/web seed",
+    "db:local": "pnpm --filter @voicetunes/web db:local",
+    "db:migrate": "pnpm --filter @voicetunes/web db:migrate",
+    "migrate:vti": "pnpm --filter @voicetunes/web migrate:vti",
+    "test": "pnpm --filter @voicetunes/web test",
+    "typecheck": "pnpm --filter @voicetunes/web typecheck",
+    "start": "turbo run start"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0"
+  },
+  "packageManager": "pnpm@9.14.2",
+  "engines": {
+    "node": ">=18"
+  }
+}

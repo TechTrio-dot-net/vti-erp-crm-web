@@ -1,0 +1,68 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Voice Tunes India (All)",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "dev"
+      ],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
+      "name": "Web + API (Next.js)",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@voicetunes/web",
+        "dev"
+      ],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
+      "name": "Web + API on the local database",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "DATABASE_URL=postgresql://postgres:postgres@localhost:5433/voicetunes?sslmode=disable",
+        "pnpm",
+        "--filter",
+        "@voicetunes/web",
+        "dev"
+      ],
+      "port": 3000,
+      "autoPort": true
+    },
+    {
+      "name": "Production build (next start)",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@voicetunes/web",
+        "start"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "Local database (PostgreSQL)",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@voicetunes/web",
+        "db:local"
+      ],
+      "port": 5433
+    },
+    {
+      "name": "Web + API on the LIVE database",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "export DATABASE_URL=\"$(cat \"$HOME/.config/vti-crm/live-database-url\")\" DISABLE_BACKGROUND_JOBS=true; [ -n \"$DATABASE_URL\" ] || { echo 'Live database URL not found in ~/.config/vti-crm/live-database-url'; exit 1; }; exec pnpm --filter @voicetunes/web dev"
+      ],
+      "port": 3000,
+      "autoPort": true
+    }
+  ]
+}
