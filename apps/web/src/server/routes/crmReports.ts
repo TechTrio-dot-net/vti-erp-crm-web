@@ -28,9 +28,15 @@ const OPEN = sql.raw(`l.stage NOT IN ('WON', 'LOST')`);
 export const WORK_START_HOUR = 10;
 export const WORK_START_MINUTE = 30;
 export const WORK_END_HOUR = 19;
+/** Lunch, as minutes of the day: 1:30 pm to 2:00 pm. Nobody is counted as not calling over it. */
+export const LUNCH_START_MINUTE = 13 * 60 + 30;
+export const LUNCH_END_MINUTE = 14 * 60;
 /** No call for this many minutes during the working day = the BDM is shown as not calling (red) */
 export const IDLE_MINUTES = 20;
-const workHours = { startHour: WORK_START_HOUR, startMinute: WORK_START_MINUTE, endHour: WORK_END_HOUR, idleMinutes: IDLE_MINUTES };
+const workHours = {
+  startHour: WORK_START_HOUR, startMinute: WORK_START_MINUTE, endHour: WORK_END_HOUR,
+  idleMinutes: IDLE_MINUTES, lunchStartMinute: LUNCH_START_MINUTE, lunchEndMinute: LUNCH_END_MINUTE,
+};
 
 async function rows<T>(query: SQL): Promise<T[]> {
   return (await db.execute<T & Record<string, unknown>>(query)).rows as T[];

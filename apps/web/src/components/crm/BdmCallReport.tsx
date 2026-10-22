@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing } from "lucide-react";
 import { api } from "@/lib/api";
-import { WORK_HOURS, callingStatus, fmtCallDuration, fmtDay, outcomeMeta, qs, stageMeta, workHourLabel } from "@/lib/crm";
+import { LUNCH_HOUR, WORK_HOURS, callingStatus, fmtCallDuration, fmtDay, outcomeMeta, qs, stageMeta, workHourLabel } from "@/lib/crm";
 import { useCrmUi } from "@/store/crm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RecordingButton } from "@/components/crm/CallRecording";
@@ -113,7 +113,7 @@ function Body({ target, onClose }: { target: BdmCallTarget; onClose: () => void 
           {isToday && <span className={`badge ${live.badge}`}>{live.label} — {live.sub}</span>}
           {target.rank && <span className="badge badge-blue">Rank {target.rank}{target.of ? ` of ${target.of}` : ""} today</span>}
         </DialogTitle>
-        <p className="text-sm text-muted-foreground">Every call of the day — leads and cold calls — hour by hour. Office hours are 10:30 am to 7:00 pm.</p>
+        <p className="text-sm text-muted-foreground">Every call of the day — leads and cold calls — hour by hour. Office hours are 10:30 am to 7:00 pm, with lunch from 1:30 to 2:00 pm.</p>
       </DialogHeader>
 
       {isError ? <div className="p-6"><ErrorState message="Could not load this salesperson's calls" /></div> : isLoading || !data ? <div className="p-6"><LoadingBlock /></div> : (
@@ -142,7 +142,7 @@ function Body({ target, onClose }: { target: BdmCallTarget; onClose: () => void 
 
           <div className="card p-4">
             <p className="font-semibold mb-1">Hour by hour</p>
-            <p className="text-xs text-muted-foreground mb-3">Red means no call at all in that hour of the working day.</p>
+            <p className="text-xs text-muted-foreground mb-3">Red means no call at all in that hour of the working day. The lunch hour is never red.</p>
             <div className="overflow-x-auto">
               <table className="data-table">
                 <thead>
@@ -156,9 +156,11 @@ function Body({ target, onClose }: { target: BdmCallTarget; onClose: () => void 
                     const total = h.made + h.incoming;
                     // An hour that hasn't happened yet today is simply still to come, not a quiet hour
                     const future = isToday && h.hour > nowHour;
+                    // Half of this hour is their lunch, so a quiet one is not something to answer for
+                    const lunch = h.hour === LUNCH_HOUR;
                     return (
-                      <tr key={h.hour} className={total === 0 && !future ? "bg-red-50/70" : undefined}>
-                        <td className="whitespace-nowrap font-medium">{workHourLabel(h.hour)}</td>
+                      <tr key={h.hour} className={total === 0 && !future && !lunch ? "row-idle" : undefined}>
+                        <td className="whitespace-nowrap font-medium">{workHourLabel(h.hour)}{lunch && <span className="block text-[11px] font-normal text-muted-foreground">lunch 1:30 – 2 pm</span>}</td>
                         <td className="w-1/3 min-w-32">
                           {total > 0 ? (
                             <div className="flex items-center gap-2">
@@ -166,7 +168,7 @@ function Body({ target, onClose }: { target: BdmCallTarget; onClose: () => void 
                               <span className="text-xs text-muted-foreground tabular-nums">{total}</span>
                             </div>
                           ) : (
-                            <span className={`text-xs ${future ? "text-muted-foreground" : "text-red-600 font-medium"}`}>{future ? "Still to come" : "No calls"}</span>
+                            <span className={`text-xs ${future || lunch ? "text-muted-foreground" : "text-red-600 font-medium"}`}>{future ? "Still to come" : lunch ? "Lunch break 1:30 – 2 pm" : "No calls"}</span>
                           )}
                         </td>
                         <td className="text-right tabular-nums">{h.made}</td>

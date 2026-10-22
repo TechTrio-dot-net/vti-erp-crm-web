@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { PhoneOff, PhoneCall } from "lucide-react";
+import { PhoneOff, PhoneCall, Utensils } from "lucide-react";
 import { api } from "@/lib/api";
 import { callingStatus } from "@/lib/crm";
 import { Button } from "@/components/ui/button";
@@ -46,11 +46,13 @@ export function MyCallingStatus() {
   const live = callingStatus(data.lastCallAt);
   if (live.key === "off") return null;
 
-  if (live.key === "working" && !picking) {
+  // Lunch is time off, so there is nothing to explain and nothing to ask for
+  if ((live.key === "working" || live.key === "lunch") && !picking) {
+    const lunch = live.key === "lunch";
     return (
       <div className="card px-5 py-3 flex items-center gap-2 text-sm">
-        <PhoneCall className="size-4 text-emerald-600" />
-        <span className="font-semibold text-emerald-700">You are calling</span>
+        {lunch ? <Utensils className="size-4 text-muted-foreground" /> : <PhoneCall className="size-4 text-emerald-600" />}
+        <span className={`font-semibold ${lunch ? "" : "text-emerald-700"}`}>{lunch ? "Lunch break" : "You are calling"}</span>
         <span className="text-muted-foreground">{live.sub}</span>
       </div>
     );

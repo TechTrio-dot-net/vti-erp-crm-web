@@ -35,8 +35,14 @@ export const outcomeMeta = (key?: string | null) => OUTCOMES.find((o) => o.key =
 
 // ─── The calling day ────────────────────────────────────────────────────────────────────────────────────────────
 
-/** Office hours: 10:30 am to 7:00 pm. Inside them, a BDM with no call for `idleMinutes` is shown in red. */
-export const WORK = { startHour: 10, startMinute: 30, endHour: 19, idleMinutes: 20 };
+/**
+ * Office hours: 10:30 am to 7:00 pm, lunch 1:30 to 2:00 pm. Inside them, a BDM with no call for
+ * `idleMinutes` is shown in red; lunch is time off, so it never counts towards that quiet stretch.
+ */
+export const WORK = { startHour: 10, startMinute: 30, endHour: 19, idleMinutes: 20, lunchStart: 13 * 60 + 30, lunchEnd: 14 * 60 };
+
+/** The hour the lunch break falls in, for the hour-by-hour report */
+export const LUNCH_HOUR = Math.floor(WORK.lunchStart / 60);
 
 /** The hours of the working day, as buckets: 10–11, 11–12 … 6–7 */
 export const WORK_HOURS = Array.from({ length: WORK.endHour - WORK.startHour }, (_, i) => WORK.startHour + i);
@@ -47,7 +53,16 @@ const hour12 = (h: number) => `${((h + 11) % 12) + 1}${h < 12 ? " am" : " pm"}`;
 export const workHourLabel = (h: number) =>
   h === WORK.startHour ? `${WORK.startHour}:${WORK.startMinute} – ${hour12(h + 1)}` : `${hour12(h)} – ${hour12(h + 1)}`;
 
-export type CallingStatus = { key: "working" | "idle" | "off"; label: string; sub: string; badge: string; dot: string };
+export type CallingStatus = { key: "working" | "idle" | "off" | "lunch"; label: string; sub: string; badge: string; dot: string };
+
+/** Minutes since the last call, with the lunch break taken out - nobody is "quiet" over their lunch */
+function quietMinutes(lastCall: Date, now: Date): number {
+  const total = Math.floor((now.getTime() - lastCall.getTime()) / 60000);
+  const from = lastCall.getHours() * 60 + lastCall.getMinutes();
+  const to = now.getHours() * 60 + now.getMinutes();
+  const lunch = Math.max(0, Math.min(to, WORK.lunchEnd) - Math.max(from, WORK.lunchStart));
+  return Math.max(0, total - lunch);
+}
 
 /**
  * Is this salesperson calling right now? Only means anything for today: green while a call was made in the
@@ -58,7 +73,10 @@ export function callingStatus(lastCall: string | null | undefined, now: Date = n
   if (minuteOfDay < WORK.startHour * 60 + WORK.startMinute || minuteOfDay >= WORK.endHour * 60) {
     return { key: "off", label: "Off hours", sub: "Work is 10:30 am – 7 pm", badge: "badge-gray", dot: "bg-muted-foreground" };
   }
-  const quiet = lastCall ? Math.floor((now.getTime() - new Date(lastCall).getTime()) / 60000) : null;
+  if (minuteOfDay >= WORK.lunchStart && minuteOfDay < WORK.lunchEnd) {
+    return { key: "lunch", label: "Lunch break", sub: "1:30 – 2 pm", badge: "badge-gray", dot: "bg-muted-foreground" };
+  }
+  const quiet = lastCall ? quietMinutes(new Date(lastCall), now) : null;
   if (quiet === null) return { key: "idle", label: "Not calling", sub: "No calls today", badge: "badge-red", dot: "bg-red-500" };
   if (quiet >= WORK.idleMinutes) return { key: "idle", label: "Not calling", sub: `Quiet for ${quiet} min`, badge: "badge-red", dot: "bg-red-500" };
   return { key: "working", label: "Working", sub: quiet < 1 ? "Calling now" : `Last call ${quiet} min ago`, badge: "badge-green", dot: "bg-emerald-500" };

@@ -160,7 +160,7 @@ export default function CallLogPage() {
           )}
           {!isBdm(role) && rows.length > 0 && (
             <p className="text-xs text-muted-foreground -mt-3">
-              Rank 1 is the most calls made that day. A red row means no call for {WORK.idleMinutes} minutes during office hours (10:30 am – 7:00 pm) — the salesperson can add the reason from their own Call Log.
+              Rank 1 is the most calls made that day. A red row means no call for {WORK.idleMinutes} minutes during office hours (10:30 am – 7:00 pm) — the 1:30 – 2 pm lunch break does not count, and the salesperson can add the reason from their own Call Log.
             </p>
           )}
 
