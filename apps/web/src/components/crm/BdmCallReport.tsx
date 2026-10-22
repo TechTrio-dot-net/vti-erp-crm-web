@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing } from "lucide-react";
+import { ArrowLeft, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing } from "lucide-react";
 import { api } from "@/lib/api";
 import { WORK_HOURS, callingStatus, fmtCallDuration, fmtDay, outcomeMeta, qs, stageMeta, workHourLabel } from "@/lib/crm";
 import { useCrmUi } from "@/store/crm";
@@ -59,13 +59,13 @@ export function BdmCallReport({ target, onClose }: { target: BdmCallTarget | nul
   return (
     <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto p-0 gap-0">
-        {target && <Body key={`${target.userId}|${target.date}`} target={target} />}
+        {target && <Body key={`${target.userId}|${target.date}`} target={target} onClose={onClose} />}
       </DialogContent>
     </Dialog>
   );
 }
 
-function Body({ target }: { target: BdmCallTarget }) {
+function Body({ target, onClose }: { target: BdmCallTarget; onClose: () => void }) {
   const openLead = useCrmUi((s) => s.openLead);
   const [kind, setKind] = useState("");
   const [result, setResult] = useState("");
@@ -104,6 +104,9 @@ function Body({ target }: { target: BdmCallTarget }) {
   return (
     <>
       <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/50">
+        <button type="button" onClick={onClose} className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-text hover:underline self-start">
+          <ArrowLeft className="size-4" />Back to the Call Log
+        </button>
         <DialogTitle className="flex flex-wrap items-center gap-2 text-xl">
           {target.name}
           <span className="text-sm font-normal text-muted-foreground">· {fmtDay(target.date)}</span>

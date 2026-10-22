@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Clock, PhoneCall, PhoneIncoming, PhoneMissed, PhoneOutgoing, Snowflake, UserPlus, Users } from "lucide-react";
+import { CalendarDays, Clock, PhoneCall, PhoneIncoming, PhoneMissed, PhoneOutgoing, Snowflake, UserPlus, Users } from "lucide-react";
 import { api } from "@/lib/api";
 import { WORK, WORK_HOURS, callingStatus, fmtCallDuration, fmtDateTime, fmtDay, isBdm, qs, rankOf, stageMeta, workHourLabel } from "@/lib/crm";
 import { useAuthStore } from "@/store/auth";
@@ -30,7 +30,8 @@ const time = (d?: string | null) => (d ? new Date(d).toLocaleTimeString("en-IN",
 const RANK_BADGE = ["badge-amber", "badge-gray", "badge-sky"];
 
 export default function CallLogPage() {
-  const role = useAuthStore((s) => s.user?.role);
+  const me = useAuthStore((s) => s.user);
+  const role = me?.role;
   const queryClient = useQueryClient();
   const openLead = useCrmUi((s) => s.openLead);
   const [range, setRange] = useState(lastDays(1));
@@ -79,7 +80,13 @@ export default function CallLogPage() {
 
   return (
     <div className="page space-y-5">
-      <PageHeader title="Call Log" subtitle="Calls synced from salespeople's phones and the company calling line" />
+      <PageHeader title="Call Log" subtitle="Calls synced from salespeople's phones and the company calling line">
+        {isBdm(role) && me && (
+          <Button variant="outline" onClick={() => setPerson({ userId: me.id, name: me.name, date: today ?? range.to })}>
+            <CalendarDays className="size-4" />See my day
+          </Button>
+        )}
+      </PageHeader>
       <FilterBar>
         <DateRangeFilter value={range} onChange={(r) => { setRange(r); setPage(1); }} />
         <BdmSelect value={bdm} onChange={(v) => { setBdm(v); setPage(1); }} />
