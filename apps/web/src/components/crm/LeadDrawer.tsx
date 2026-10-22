@@ -51,6 +51,15 @@ function quickTimes() {
   ];
 }
 
+/** The way out of the drawer, shown whoever opened it and wherever they opened it from */
+function BackButton({ onClose, backTo }: { onClose: () => void; backTo?: string | null }) {
+  return (
+    <button type="button" onClick={onClose} className="inline-flex items-center gap-1.5 self-start text-sm font-medium text-primary-text hover:underline">
+      <ArrowLeft className="size-4" />{backTo ? `Back to ${backTo}` : "Back"}
+    </button>
+  );
+}
+
 export function LeadDrawer() {
   const { leadId, leadBackTo, closeLead } = useCrmUi();
   return (
@@ -138,6 +147,7 @@ function LeadDrawerBody({ leadId, onClose, backTo }: { leadId: string; onClose: 
   if (isLoading) {
     return (
       <div className="p-6 space-y-3">
+        <BackButton onClose={onClose} backTo={backTo} />
         <DialogTitle className="sr-only">Loading lead</DialogTitle>
         {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-10" />)}
       </div>
@@ -145,9 +155,12 @@ function LeadDrawerBody({ leadId, onClose, backTo }: { leadId: string; onClose: 
   }
   if (isError || !lead) {
     return (
-      <div className="p-8 text-center text-sm text-muted-foreground">
-        <DialogTitle className="text-base mb-1">Lead unavailable</DialogTitle>
-        {(error as Error)?.message ?? "Lead not found"}
+      <div className="p-6 space-y-3">
+        <BackButton onClose={onClose} backTo={backTo} />
+        <div className="py-6 text-center text-sm text-muted-foreground">
+          <DialogTitle className="text-base mb-1">Lead unavailable</DialogTitle>
+          {(error as Error)?.message ?? "Lead not found"}
+        </div>
       </div>
     );
   }
@@ -169,11 +182,7 @@ function LeadDrawerBody({ leadId, onClose, backTo }: { leadId: string; onClose: 
     <div>
       {/* Header */}
       <div className="p-6 pb-4 border-b border-border/60 space-y-3">
-        {backTo && (
-          <button type="button" onClick={onClose} className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-text hover:underline">
-            <ArrowLeft className="size-4" />Back to {backTo}
-          </button>
-        )}
+        <BackButton onClose={onClose} backTo={backTo} />
         <DialogHeader>
           <DialogTitle className="flex flex-wrap items-center gap-2 text-xl pr-8">
             {lead.contactName || lead.name}
