@@ -33,6 +33,42 @@ export const LOST_REASONS = ["Price too high", "Not interested", "Chose competit
 export const stageMeta = (key?: string | null) => STAGES.find((s) => s.key === key) ?? { key: key ?? "", label: key ?? "—", badge: "badge-gray" };
 export const outcomeMeta = (key?: string | null) => OUTCOMES.find((o) => o.key === key) ?? { key: key ?? "", label: key ?? "—", badge: "badge-gray" };
 
+// ─── The calling day ────────────────────────────────────────────────────────────────────────────────────────────
+
+/** Office hours: 10:30 am to 7:00 pm. Inside them, a BDM with no call for `idleMinutes` is shown in red. */
+export const WORK = { startHour: 10, startMinute: 30, endHour: 19, idleMinutes: 20 };
+
+/** The hours of the working day, as buckets: 10–11, 11–12 … 6–7 */
+export const WORK_HOURS = Array.from({ length: WORK.endHour - WORK.startHour }, (_, i) => WORK.startHour + i);
+
+const hour12 = (h: number) => `${((h + 11) % 12) + 1}${h < 12 ? " am" : " pm"}`;
+
+/** 10 → "10:30 – 11 am" (the day starts at 10:30), 14 → "2 – 3 pm" */
+export const workHourLabel = (h: number) =>
+  h === WORK.startHour ? `${WORK.startHour}:${WORK.startMinute} – ${hour12(h + 1)}` : `${hour12(h)} – ${hour12(h + 1)}`;
+
+export type CallingStatus = { key: "working" | "idle" | "off"; label: string; sub: string; badge: string; dot: string };
+
+/**
+ * Is this salesperson calling right now? Only means anything for today: green while a call was made in the
+ * last `idleMinutes`, red once the line has gone quiet inside office hours, grey outside them.
+ */
+export function callingStatus(lastCall: string | null | undefined, now: Date = new Date()): CallingStatus {
+  const minuteOfDay = now.getHours() * 60 + now.getMinutes();
+  if (minuteOfDay < WORK.startHour * 60 + WORK.startMinute || minuteOfDay >= WORK.endHour * 60) {
+    return { key: "off", label: "Off hours", sub: "Work is 10:30 am – 7 pm", badge: "badge-gray", dot: "bg-muted-foreground" };
+  }
+  const quiet = lastCall ? Math.floor((now.getTime() - new Date(lastCall).getTime()) / 60000) : null;
+  if (quiet === null) return { key: "idle", label: "Not calling", sub: "No calls today", badge: "badge-red", dot: "bg-red-500" };
+  if (quiet >= WORK.idleMinutes) return { key: "idle", label: "Not calling", sub: `Quiet for ${quiet} min`, badge: "badge-red", dot: "bg-red-500" };
+  return { key: "working", label: "Working", sub: quiet < 1 ? "Calling now" : `Last call ${quiet} min ago`, badge: "badge-green", dot: "bg-emerald-500" };
+}
+
+/** Who made the most calls that day: 1 is the busiest, people with the same number share a rank */
+export const rankOf = <T extends { date: string; outgoing: number }>(row: T, all: T[]) =>
+  all.filter((r) => r.date === row.date && r.outgoing > row.outgoing).length + 1;
+
+
 export type CrmLead = {
   id: string;
   name: string;

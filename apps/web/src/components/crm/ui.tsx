@@ -148,6 +148,7 @@ export function DataTable<T extends Record<string, unknown>>({
   empty = "Nothing here yet",
   csvName,
   onRowClick,
+  rowClassName,
   footer,
   actions,
 }: {
@@ -157,6 +158,8 @@ export function DataTable<T extends Record<string, unknown>>({
   empty?: string;
   csvName?: string;
   onRowClick?: (row: T) => void;
+  /** Extra classes for one row, e.g. to colour a salesperson who has stopped calling */
+  rowClassName?: (row: T) => string | undefined;
   footer?: React.ReactNode;
   actions?: React.ReactNode;
 }) {
@@ -192,7 +195,7 @@ export function DataTable<T extends Record<string, unknown>>({
             </thead>
             <tbody>
               {rows.map((row, i) => (
-                <tr key={(row.id as string) ?? i} onClick={onRowClick ? () => onRowClick(row) : undefined} className={onRowClick ? "cursor-pointer" : undefined}>
+                <tr key={(row.id as string) ?? i} onClick={onRowClick ? () => onRowClick(row) : undefined} className={`${onRowClick ? "cursor-pointer" : ""} ${rowClassName?.(row) ?? ""}`.trim() || undefined}>
                   {columns.map((c) => (
                     <td key={c.key} className={`${c.className ?? ""} ${c.align === "right" ? "text-right tabular-nums" : ""}`}>
                       {c.render ? c.render(row) : ((row[c.key] as React.ReactNode) ?? "—")}

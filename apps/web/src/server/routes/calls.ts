@@ -1,7 +1,7 @@
 import express, { Router, type Response } from 'express';
 import { and, count, desc, eq, isNull, sql, type SQL } from 'drizzle-orm';
 import { db } from '../db/index';
-import { callLogs, callRecordings, leads, mobileDevices, users, type CallDirection } from '../db/schema';
+import { bdmIdleReasons, callLogs, callRecordings, leads, mobileDevices, users, type CallDirection } from '../db/schema';
 import { authMiddleware, type AuthRequest } from '../lib/auth';
 import { BDM_ROLE, bdmScope, dateRange, isCrmAdmin, localDate, normalizePhone, requireCrm, requireCrmAdmin } from '../lib/crm';
 import { HttpError, optionalId, sendError, uuidParam } from '../lib/http';
@@ -254,6 +254,51 @@ router.get('/', async (req: AuthRequest, res) => {
     res.json({ rows: req.user!.role === BDM_ROLE ? rows.map((r) => ({ ...r, leadName: r.leadOwner === req.user!.id ? r.leadName : r.leadId ? 'Another BDM\'s lead' : null, leadId: r.leadOwner === req.user!.id ? r.leadId : null })) : rows, total, page, limit });
   } catch (err) {
     sendError(res, err, 'Failed to fetch calls');
+  }
+});
+
+// ─── Why no calls ───────────────────────────────────────────────────────────────────────────────────────────────
+
+/** The usual answers; a salesperson can also type their own */
+export const IDLE_REASONS = ['In a meeting', 'On a shoot', 'Travelling', 'Lunch break', 'Office work', 'Not well'];
+
+const todayOnly = (column: unknown) => sql`${localDate(column as SQL)} = ${localDate(sql`now()`)}`;
+
+/** My calling day so far: when I last called and the reason I gave for the quiet since then */
+router.get('/idle-reason', async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    const [[call], [latest]] = await Promise.all([
+      db
+        .select({ lastCallAt: sql<string | null>`max(${callLogs.startedAt})` })
+        .from(callLogs)
+        .where(and(eq(callLogs.userId, userId), todayOnly(callLogs.startedAt))),
+      db
+        .select()
+        .from(bdmIdleReasons)
+        .where(and(eq(bdmIdleReasons.userId, userId), todayOnly(bdmIdleReasons.createdAt)))
+        .orderBy(desc(bdmIdleReasons.createdAt))
+        .limit(1),
+    ]);
+    const lastCallAt = call?.lastCallAt ?? null;
+    // Calling again answers the question, so a reason given before the last call is done with
+    const current = latest && (!lastCallAt || latest.createdAt > new Date(lastCallAt)) ? latest : null;
+    res.json({ lastCallAt, options: IDLE_REASONS, reason: current && { reason: current.reason, note: current.note, createdAt: current.createdAt } });
+  } catch (err) {
+    sendError(res, err, 'Failed to load your calling status');
+  }
+});
+
+/** The salesperson says why they have not been calling */
+router.post('/idle-reason', async (req: AuthRequest, res) => {
+  try {
+    const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 80) : '';
+    if (!reason) throw new HttpError(400, 'Choose a reason or type your own');
+    const note = typeof req.body?.note === 'string' ? req.body.note.trim().slice(0, 300) || null : null;
+    const [row] = await db.insert(bdmIdleReasons).values({ userId: req.user!.id, reason, note }).returning();
+    res.status(201).json({ reason: row.reason, note: row.note, createdAt: row.createdAt });
+  } catch (err) {
+    sendError(res, err, 'Could not save your reason');
   }
 });
 

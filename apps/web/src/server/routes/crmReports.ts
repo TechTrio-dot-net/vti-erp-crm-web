@@ -24,6 +24,14 @@ const tz = APP_TIMEZONE;
 const day = (column: string) => sql.raw(`(${column} AT TIME ZONE '${tz.replace(/'/g, '')}')::date`);
 const OPEN = sql.raw(`l.stage NOT IN ('WON', 'LOST')`);
 
+/** The working day in business-local hours: 10:30 am to 7:00 pm */
+export const WORK_START_HOUR = 10;
+export const WORK_START_MINUTE = 30;
+export const WORK_END_HOUR = 19;
+/** No call for this many minutes during the working day = the BDM is shown as not calling (red) */
+export const IDLE_MINUTES = 20;
+const workHours = { startHour: WORK_START_HOUR, startMinute: WORK_START_MINUTE, endHour: WORK_END_HOUR, idleMinutes: IDLE_MINUTES };
+
 async function rows<T>(query: SQL): Promise<T[]> {
   return (await db.execute<T & Record<string, unknown>>(query)).rows as T[];
 }
@@ -349,13 +357,23 @@ router.get('/bdm-time', async (req: AuthRequest, res) => {
   }
 });
 
+type CallDayRow = {
+  userId: string; name: string; date: string; total: number; outgoing: number; incoming: number; missed: number;
+  connected: number; notAnswered: number; talkSec: number; leadCalls: number; coldCalls: number; leadsCalled: number;
+  unmatched: number; firstCall: string | null; lastCall: string | null;
+  idleReason?: { reason: string; note: string | null; createdAt: string } | null;
+};
+
+type IdleReason = { userId: string; reason: string; note: string | null; createdAt: string };
+
 /** Calls from phones and the calling service, per BDM per day */
 router.get('/calls', async (req: AuthRequest, res) => {
   try {
     const { from, to } = dateRange(req.query, 7);
     const scope = bdmFilter(req, 'c.user_id');
-    const [perDay, hourly] = await Promise.all([
-      rows(sql`
+    const today = todayLocal();
+    const [perDay, hourly, people, idleReasons] = await Promise.all([
+      rows<CallDayRow>(sql`
         SELECT c.user_id AS "userId", coalesce(u.name, 'Unknown') AS name, to_char(${day('c.started_at')}, 'YYYY-MM-DD') AS date,
           count(*)::int AS total,
           count(*) FILTER (WHERE c.direction = 'outgoing')::int AS outgoing,
@@ -364,21 +382,114 @@ router.get('/calls', async (req: AuthRequest, res) => {
           count(*) FILTER (WHERE c.direction IN ('outgoing', 'incoming') AND c.duration_sec > 0)::int AS connected,
           count(*) FILTER (WHERE c.direction = 'outgoing' AND c.duration_sec = 0)::int AS "notAnswered",
           coalesce(sum(c.duration_sec), 0)::int AS "talkSec",
+          count(*) FILTER (WHERE c.direction = 'outgoing' AND c.lead_id IS NOT NULL)::int AS "leadCalls",
+          count(*) FILTER (WHERE c.direction = 'outgoing' AND c.lead_id IS NULL)::int AS "coldCalls",
           count(DISTINCT c.lead_id)::int AS "leadsCalled",
           count(*) FILTER (WHERE c.lead_id IS NULL)::int AS unmatched,
           min(c.started_at) AS "firstCall", max(c.started_at) AS "lastCall"
         FROM call_logs c LEFT JOIN users u ON u.id = c.user_id
         WHERE ${day('c.started_at')} BETWEEN ${from} AND ${to} ${scope}
-        GROUP BY 1, 2, 3 ORDER BY 3 DESC, 2`),
+        GROUP BY 1, 2, 3`),
       rows(sql`
         SELECT extract(hour FROM c.started_at AT TIME ZONE ${tz})::int AS hour, count(*)::int AS calls,
           count(*) FILTER (WHERE c.direction IN ('outgoing', 'incoming') AND c.duration_sec > 0)::int AS connected
         FROM call_logs c WHERE ${day('c.started_at')} BETWEEN ${from} AND ${to} ${scope}
         GROUP BY 1 ORDER BY 1`),
+      // Every working BDM, so someone who hasn't called at all today still shows up (in red)
+      rows<{ userId: string; name: string }>(sql`
+        SELECT u.id AS "userId", u.name FROM users u
+        WHERE u.role = ${BDM_ROLE} AND u.is_active ${bdmFilter(req, 'u.id')} ORDER BY u.name`),
+      // The newest reason each of them gave today for not calling
+      rows<IdleReason>(sql`
+        SELECT DISTINCT ON (r.user_id) r.user_id AS "userId", r.reason, r.note, r.created_at AS "createdAt"
+        FROM bdm_idle_reasons r
+        WHERE ${day('r.created_at')} = ${today} ${bdmFilter(req, 'r.user_id')}
+        ORDER BY r.user_id, r.created_at DESC`),
     ]);
-    res.json({ range: { from, to }, rows: perDay, hourly });
+    const all = [...perDay];
+    if (from <= today && today <= to) {
+      for (const p of people) {
+        if (!perDay.some((r) => r.userId === p.userId && r.date === today)) {
+          all.push({
+            userId: p.userId, name: p.name, date: today, total: 0, outgoing: 0, incoming: 0, missed: 0, connected: 0,
+            notAnswered: 0, talkSec: 0, leadCalls: 0, coldCalls: 0, leadsCalled: 0, unmatched: 0, firstCall: null, lastCall: null,
+          });
+        }
+      }
+    }
+    for (const row of all) {
+      if (row.date !== today) continue;
+      const given = idleReasons.find((r) => r.userId === row.userId);
+      row.idleReason = given && (!row.lastCall || given.createdAt > row.lastCall) ? { reason: given.reason, note: given.note, createdAt: given.createdAt } : null;
+    }
+    // Newest day first, and inside a day the busiest BDM first - that order is the daily ranking
+    all.sort((a, b) => (a.date === b.date ? b.outgoing - a.outgoing || b.total - a.total || a.name.localeCompare(b.name) : a.date < b.date ? 1 : -1));
+    res.json({ range: { from, to }, today, workHours, rows: all, hourly });
   } catch (err) {
     sendError(res, err, 'Failed to load call report');
+  }
+});
+
+/** No result was written on the call itself, so the lead's own stage says how it went */
+const RESULT_BY_STAGE: Record<string, string> = { PROPOSAL: 'INTERESTED', NEGOTIATION: 'INTERESTED', WON: 'CONVERTED', LOST: 'LOST' };
+
+type CallRow = {
+  id: string; startedAt: string; direction: string; durationSec: number; status: string | null; source: string;
+  phone: string; contactName: string | null; recordingUrl: string | null; recordingStatus: string | null;
+  leadId: string | null; leadName: string | null; leadStage: string | null; statusLabel: string | null;
+  outcome: string | null; note: string | null;
+};
+
+/** One salesperson: their day hour by hour, and every call they made or got - lead calls and cold calls alike */
+router.get('/calls/bdm', async (req: AuthRequest, res) => {
+  try {
+    const { from, to } = dateRange(req.query, 1);
+    const userId = optionalId(bdmScope(req, req.query.user), 'user');
+    if (!userId) throw new HttpError(400, 'user is required');
+    const inRange = sql`c.user_id = ${userId} AND ${day('c.started_at')} BETWEEN ${from} AND ${to}`;
+    const [[person], hourly, reasons, calls] = await Promise.all([
+      rows<{ userId: string; name: string }>(sql`SELECT u.id AS "userId", u.name FROM users u WHERE u.id = ${userId}`),
+      rows(sql`
+        SELECT extract(hour FROM c.started_at AT TIME ZONE ${tz})::int AS hour,
+          count(*) FILTER (WHERE c.direction = 'outgoing')::int AS made,
+          count(*) FILTER (WHERE c.direction IN ('outgoing', 'incoming') AND c.duration_sec > 0)::int AS connected,
+          count(*) FILTER (WHERE c.direction = 'outgoing' AND c.duration_sec = 0)::int AS "notAnswered",
+          count(*) FILTER (WHERE c.direction = 'incoming')::int AS incoming,
+          count(*) FILTER (WHERE c.direction IN ('missed', 'rejected'))::int AS missed,
+          count(*) FILTER (WHERE c.direction = 'outgoing' AND c.lead_id IS NOT NULL)::int AS "leadCalls",
+          count(*) FILTER (WHERE c.direction = 'outgoing' AND c.lead_id IS NULL)::int AS "coldCalls",
+          coalesce(sum(c.duration_sec), 0)::int AS "talkSec"
+        FROM call_logs c WHERE ${inRange} GROUP BY 1 ORDER BY 1`),
+      rows<{ reason: string; note: string | null; createdAt: string }>(sql`
+        SELECT r.reason, r.note, r.created_at AS "createdAt" FROM bdm_idle_reasons r
+        WHERE r.user_id = ${userId} AND ${day('r.created_at')} BETWEEN ${from} AND ${to}
+        ORDER BY r.created_at DESC`),
+      rows<CallRow>(sql`
+        SELECT c.id, c.started_at AS "startedAt", c.direction, c.duration_sec AS "durationSec", c.status, c.source,
+          c.phone, c.contact_name AS "contactName", c.recording_url AS "recordingUrl", r.status AS "recordingStatus",
+          c.lead_id AS "leadId", l.company_name AS "leadName", l.stage AS "leadStage", l.status_label AS "statusLabel",
+          f.outcome, f.note
+        FROM call_logs c
+        LEFT JOIN leads l ON l.id = c.lead_id
+        LEFT JOIN call_recordings r ON r.call_log_id = c.id
+        LEFT JOIN LATERAL (
+          SELECT lf.outcome, lf.note FROM lead_followups lf WHERE lf.call_log_id = c.id ORDER BY lf.created_at DESC LIMIT 1
+        ) f ON true
+        WHERE ${inRange} ORDER BY c.started_at DESC LIMIT 1000`),
+    ]);
+    if (!person) throw new HttpError(404, 'Salesperson not found');
+    res.json({
+      range: { from, to },
+      today: todayLocal(),
+      workHours,
+      person,
+      hourly,
+      reasons,
+      // A call on a number the CRM doesn't know yet is a cold call; the rest are calls on leads
+      calls: calls.map((c) => ({ ...c, kind: c.leadId ? 'lead' : 'cold', result: c.outcome ?? RESULT_BY_STAGE[c.leadStage ?? ''] ?? null })),
+    });
+  } catch (err) {
+    sendError(res, err, 'Failed to load this salesperson\'s calls');
   }
 });
 

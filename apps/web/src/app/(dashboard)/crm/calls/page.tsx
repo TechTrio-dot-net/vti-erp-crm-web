@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Clock, PhoneCall, PhoneIncoming, PhoneMissed, PhoneOutgoing, UserPlus } from "lucide-react";
+import { Clock, PhoneCall, PhoneIncoming, PhoneMissed, PhoneOutgoing, Snowflake, UserPlus, Users } from "lucide-react";
 import { api } from "@/lib/api";
-import { fmtCallDuration, fmtDateTime, fmtDay, isBdm, qs, stageMeta } from "@/lib/crm";
+import { WORK, WORK_HOURS, callingStatus, fmtCallDuration, fmtDateTime, fmtDay, isBdm, qs, rankOf, stageMeta, workHourLabel } from "@/lib/crm";
 import { useAuthStore } from "@/store/auth";
 import { useCrmUi } from "@/store/crm";
 import { Button } from "@/components/ui/button";
 import { RecordingButton } from "@/components/crm/CallRecording";
+import { BdmCallReport, type BdmCallTarget } from "@/components/crm/BdmCallReport";
+import { MyCallingStatus } from "@/components/crm/MyCallingStatus";
 import { BdmSelect, DataTable, DateRangeFilter, ErrorState, FilterBar, LoadingBlock, PageHeader, StatCard, lastDays, selectCls } from "@/components/crm/ui";
 
 type Call = {
@@ -18,11 +20,14 @@ type Call = {
 };
 type DayRow = {
   userId: string; name: string; date: string; total: number; outgoing: number; incoming: number; missed: number; connected: number;
-  notAnswered: number; talkSec: number; leadsCalled: number; unmatched: number; firstCall: string; lastCall: string;
+  notAnswered: number; talkSec: number; leadCalls: number; coldCalls: number; leadsCalled: number; unmatched: number; firstCall: string | null; lastCall: string | null;
+  idleReason: { reason: string; note: string | null; createdAt: string } | null;
 };
+type Report = { today: string; rows: DayRow[]; hourly: Array<{ hour: number; calls: number; connected: number }> };
 
 const DIRECTION_ICON: Record<string, typeof PhoneCall> = { outgoing: PhoneOutgoing, incoming: PhoneIncoming, missed: PhoneMissed, rejected: PhoneMissed };
 const time = (d?: string | null) => (d ? new Date(d).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }) : "—");
+const RANK_BADGE = ["badge-amber", "badge-gray", "badge-sky"];
 
 export default function CallLogPage() {
   const role = useAuthStore((s) => s.user?.role);
@@ -34,11 +39,19 @@ export default function CallLogPage() {
   const [matched, setMatched] = useState("");
   const [recording, setRecording] = useState("");
   const [page, setPage] = useState(1);
+  const [person, setPerson] = useState<BdmCallTarget | null>(null);
   const limit = 100;
+
+  // Keeps "working / not calling" honest between refetches
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setTick((n) => n + 1), 60_000);
+    return () => clearInterval(timer);
+  }, []);
 
   const report = useQuery({
     queryKey: ["crm", "calls-report", range, bdm],
-    queryFn: () => api<{ rows: DayRow[]; hourly: Array<{ hour: number; calls: number; connected: number }> }>(`/crm/reports/calls${qs({ ...range, bdm })}`),
+    queryFn: () => api<Report>(`/crm/reports/calls${qs({ ...range, bdm })}`),
     refetchInterval: 60_000,
   });
   const log = useQuery({
@@ -58,8 +71,10 @@ export default function CallLogPage() {
   });
 
   const rows = report.data?.rows ?? [];
-  const sum = (k: keyof DayRow) => rows.reduce((s, r) => s + (r[k] as number), 0);
+  const today = report.data?.today;
+  const sum = (k: keyof DayRow) => rows.reduce((s, r) => s + ((r[k] as number) ?? 0), 0);
   const maxHour = Math.max(1, ...(report.data?.hourly.map((h) => h.calls) ?? []));
+  const outsideHours = (report.data?.hourly ?? []).filter((h) => !WORK_HOURS.includes(h.hour)).reduce((s, h) => s + h.calls, 0);
   const pages = log.data ? Math.max(1, Math.ceil(log.data.total / limit)) : 1;
 
   return (
@@ -70,50 +85,97 @@ export default function CallLogPage() {
         <BdmSelect value={bdm} onChange={(v) => { setBdm(v); setPage(1); }} />
       </FilterBar>
 
+      {isBdm(role) && <MyCallingStatus />}
+
       {report.isError ? <ErrorState /> : report.isLoading ? <LoadingBlock rows={3} /> : (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
             <StatCard label="Calls made" value={sum("outgoing")} sub={`${sum("notAnswered")} not answered`} tone="blue" icon={PhoneOutgoing} />
             <StatCard label="Connected" value={sum("connected")} sub={sum("outgoing") ? `${Math.round((sum("connected") / Math.max(1, sum("outgoing") + sum("incoming"))) * 100)}% connect rate` : undefined} tone="green" icon={PhoneCall} />
             <StatCard label="Talk time" value={fmtCallDuration(sum("talkSec"))} sub={sum("connected") ? `avg ${fmtCallDuration(Math.round(sum("talkSec") / sum("connected")))} per call` : undefined} tone="purple" icon={Clock} />
-            <StatCard label="Incoming" value={sum("incoming")} sub={`${sum("missed")} missed`} tone="amber" icon={PhoneIncoming} />
-            <StatCard label="Unknown numbers" value={sum("unmatched")} sub="not a lead yet" tone="red" icon={UserPlus} />
+            <StatCard label="Lead calls" value={sum("leadCalls")} sub={`${sum("leadsCalled")} leads called`} tone="sky" icon={Users} />
+            <StatCard label="Cold calls" value={sum("coldCalls")} sub="new numbers, not a lead yet" tone="amber" icon={Snowflake} />
+            <StatCard label="Incoming" value={sum("incoming")} sub={`${sum("missed")} missed`} tone="red" icon={PhoneIncoming} />
           </div>
 
           {!isBdm(role) && rows.length > 0 && (
             <DataTable
-              title="Per salesperson"
+              title="Per salesperson — click a row to see the full day"
               csvName="calls-per-bdm"
               rows={rows}
+              onRowClick={(r) => setPerson({ userId: r.userId, name: r.name, date: r.date, rank: rankOf(r, rows), of: rows.filter((x) => x.date === r.date).length })}
+              rowClassName={(r) => (r.date === today && callingStatus(r.lastCall).key === "idle" ? "row-idle" : "")}
               columns={[
+                {
+                  key: "rank", label: "Rank",
+                  render: (r) => {
+                    const rank = rankOf(r, rows);
+                    return <span className={`badge ${RANK_BADGE[rank - 1] ?? "badge-gray"}`}>#{rank}</span>;
+                  },
+                  csv: (r) => rankOf(r, rows),
+                },
                 { key: "date", label: "Date", render: (r) => fmtDay(r.date) },
                 { key: "name", label: "BDM", className: "font-semibold" },
+                {
+                  key: "live", label: "Right now",
+                  render: (r) => {
+                    if (r.date !== today) return <span className="text-muted-foreground">—</span>;
+                    const live = callingStatus(r.lastCall);
+                    return (
+                      <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                        <span className={`size-2 rounded-full ${live.dot}`} />
+                        <span className={live.key === "idle" ? "text-red-600 font-semibold" : ""}>{live.label}</span>
+                        <span className="text-xs text-muted-foreground">{live.sub}</span>
+                        {live.key === "idle" && (r.idleReason
+                          ? <span className="badge badge-amber" title={r.idleReason.note ?? undefined}>{r.idleReason.reason}</span>
+                          : <span className="text-xs text-muted-foreground italic">no reason given</span>)}
+                      </span>
+                    );
+                  },
+                  csv: (r) => {
+                    if (r.date !== today) return "";
+                    const live = callingStatus(r.lastCall);
+                    return live.key === "idle" ? `${live.label} (${r.idleReason?.reason ?? "no reason given"})` : live.label;
+                  },
+                },
                 { key: "outgoing", label: "Made", align: "right" },
                 { key: "connected", label: "Connected", align: "right", render: (r) => <span className="text-emerald-700 font-semibold">{r.connected}</span> },
                 { key: "notAnswered", label: "Not answered", align: "right" },
+                { key: "leadCalls", label: "Lead calls", align: "right" },
+                { key: "coldCalls", label: "Cold calls", align: "right" },
                 { key: "incoming", label: "Incoming", align: "right" },
                 { key: "missed", label: "Missed", align: "right", render: (r) => <span className={r.missed ? "text-red-600" : ""}>{r.missed}</span> },
                 { key: "talkSec", label: "Talk time", align: "right", render: (r) => fmtCallDuration(r.talkSec) },
-                { key: "leadsCalled", label: "Leads called", align: "right" },
                 { key: "firstCall", label: "First call", render: (r) => time(r.firstCall) },
                 { key: "lastCall", label: "Last call", render: (r) => time(r.lastCall) },
               ]}
             />
           )}
+          {!isBdm(role) && rows.length > 0 && (
+            <p className="text-xs text-muted-foreground -mt-3">
+              Rank 1 is the most calls made that day. A red row means no call for {WORK.idleMinutes} minutes during office hours (10:30 am – 7:00 pm) — the salesperson can add the reason from their own Call Log.
+            </p>
+          )}
 
           {(report.data?.hourly.length ?? 0) > 0 && (
             <div className="card p-5">
-              <p className="font-semibold mb-3">Calls by hour</p>
-              <div className="flex items-end gap-1 h-28">
-                {Array.from({ length: 24 }, (_, h) => report.data!.hourly.find((x) => x.hour === h)).map((x, h) => (
-                  <div key={h} className="flex-1 flex flex-col items-center gap-1" title={`${h}:00 — ${x?.calls ?? 0} calls, ${x?.connected ?? 0} connected`}>
-                    <div className="w-full flex flex-col justify-end h-24 bg-muted/40 rounded-sm overflow-hidden">
-                      <div className="w-full bg-primary" style={{ height: `${((x?.calls ?? 0) / maxHour) * 100}%` }} />
+              <p className="font-semibold">Calls by hour</p>
+              <p className="text-xs text-muted-foreground mb-3">Office hours, 10:30 am to 7:00 pm.</p>
+              <div className="flex items-end gap-2 h-32">
+                {WORK_HOURS.map((h) => {
+                  const x = report.data!.hourly.find((e) => e.hour === h);
+                  return (
+                    <div key={h} className="flex-1 flex flex-col items-center gap-1" title={`${workHourLabel(h)} — ${x?.calls ?? 0} calls, ${x?.connected ?? 0} connected`}>
+                      <span className="text-[10px] text-muted-foreground tabular-nums">{x?.calls ?? 0}</span>
+                      <div className="w-full flex flex-col justify-end h-20 bg-muted/40 rounded-sm overflow-hidden">
+                        <div className={`w-full ${x?.calls ? "bg-primary" : ""}`} style={{ height: `${((x?.calls ?? 0) / maxHour) * 100}%` }} />
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">{workHourLabel(h).split(" – ")[0]}</span>
                     </div>
-                    <span className="text-[9px] text-muted-foreground">{h % 3 === 0 ? h : ""}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
+              {outsideHours > 0 && <p className="text-xs text-muted-foreground mt-2">{outsideHours} call{outsideHours === 1 ? "" : "s"} outside office hours.</p>}
             </div>
           )}
         </>
@@ -127,9 +189,9 @@ export default function CallLogPage() {
           <option value="missed">Missed</option>
         </select>
         <select value={matched} onChange={(e) => { setMatched(e.target.value); setPage(1); }} className={selectCls}>
-          <option value="">Leads & unknown numbers</option>
-          <option value="yes">Only leads</option>
-          <option value="no">Only unknown numbers</option>
+          <option value="">Lead calls & cold calls</option>
+          <option value="yes">Only lead calls</option>
+          <option value="no">Only cold calls (new numbers)</option>
         </select>
         <select value={recording} onChange={(e) => { setRecording(e.target.value); setPage(1); }} className={selectCls}>
           <option value="">With or without recording</option>
@@ -178,6 +240,8 @@ export default function CallLogPage() {
           )}
         </>
       )}
+
+      <BdmCallReport target={person} onClose={() => setPerson(null)} />
     </div>
   );
 }

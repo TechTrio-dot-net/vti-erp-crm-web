@@ -502,6 +502,22 @@ export const bdmSessions = pgTable(
   (t) => [index().on(t.userId, t.startedAt), index().on(t.startedAt)]
 );
 
+/**
+ * Why a salesperson stopped calling for a while (meeting, shoot, or whatever they type). It stands
+ * until their next call: the Call Log shows the newest one made after that call.
+ */
+export const bdmIdleReasons = pgTable(
+  'bdm_idle_reasons',
+  {
+    id: id(),
+    userId: uuid().notNull().references(() => users.id, { onDelete: 'cascade' }),
+    reason: text().notNull(),
+    note: text(),
+    createdAt: ts().notNull().defaultNow(),
+  },
+  (t) => [index().on(t.userId, t.createdAt)]
+);
+
 export const bdmLeaves = pgTable(
   'bdm_leaves',
   {

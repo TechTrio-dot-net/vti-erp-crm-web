@@ -347,6 +347,9 @@ select:focus {
   .data-table tbody tr:last-child { border-bottom: none; }
   .data-table tbody tr:hover { background: hsl(48 60% 97%); }
   .data-table tbody td { padding: 12px 16px; }
+  /* A salesperson who has stopped calling during office hours: the whole row goes red */
+  .data-table tbody tr.row-idle { background: hsl(0 84% 57% / .12); box-shadow: inset 3px 0 0 var(--clr-red); }
+  .data-table tbody tr.row-idle:hover { background: hsl(0 84% 57% / .18); }
   .data-table tfoot tr { border-top: 2px solid var(--border); }
   .data-table tfoot td { padding: 12px 16px; }
 }
