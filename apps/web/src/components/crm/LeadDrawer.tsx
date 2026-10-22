@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Phone, MessageCircle, Mail, MapPin, Megaphone, Clock, UserRound, History, Pencil, Trash2, FileSignature } from "lucide-react";
+import { ArrowLeft, Phone, MessageCircle, Mail, MapPin, Megaphone, Clock, UserRound, History, Pencil, Trash2, FileSignature } from "lucide-react";
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/erp/me";
 import {
@@ -52,17 +52,17 @@ function quickTimes() {
 }
 
 export function LeadDrawer() {
-  const { leadId, closeLead } = useCrmUi();
+  const { leadId, leadBackTo, closeLead } = useCrmUi();
   return (
     <Dialog open={!!leadId} onOpenChange={(o) => !o && closeLead()}>
       <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto p-0 gap-0">
-        {leadId && <LeadDrawerBody key={leadId} leadId={leadId} onClose={closeLead} />}
+        {leadId && <LeadDrawerBody key={leadId} leadId={leadId} onClose={closeLead} backTo={leadBackTo} />}
       </DialogContent>
     </Dialog>
   );
 }
 
-function LeadDrawerBody({ leadId, onClose }: { leadId: string; onClose: () => void }) {
+function LeadDrawerBody({ leadId, onClose, backTo }: { leadId: string; onClose: () => void; backTo?: string | null }) {
   const queryClient = useQueryClient();
   const role = useAuthStore((s) => s.user?.role);
   const admin = isCrmAdmin(role);
@@ -169,6 +169,11 @@ function LeadDrawerBody({ leadId, onClose }: { leadId: string; onClose: () => vo
     <div>
       {/* Header */}
       <div className="p-6 pb-4 border-b border-border/60 space-y-3">
+        {backTo && (
+          <button type="button" onClick={onClose} className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-text hover:underline">
+            <ArrowLeft className="size-4" />Back to {backTo}
+          </button>
+        )}
         <DialogHeader>
           <DialogTitle className="flex flex-wrap items-center gap-2 text-xl pr-8">
             {lead.contactName || lead.name}

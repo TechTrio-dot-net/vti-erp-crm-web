@@ -59,13 +59,13 @@ export function BdmCallReport({ target, onClose }: { target: BdmCallTarget | nul
   return (
     <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto p-0 gap-0">
-        {target && <Body key={`${target.userId}|${target.date}`} target={target} onClose={onClose} />}
+        {target && <Body key={`${target.userId}|${target.date}`} target={target} />}
       </DialogContent>
     </Dialog>
   );
 }
 
-function Body({ target, onClose }: { target: BdmCallTarget; onClose: () => void }) {
+function Body({ target }: { target: BdmCallTarget }) {
   const openLead = useCrmUi((s) => s.openLead);
   const [kind, setKind] = useState("");
   const [result, setResult] = useState("");
@@ -222,7 +222,7 @@ function Body({ target, onClose }: { target: BdmCallTarget; onClose: () => void 
               {
                 key: "leadName", label: "Lead",
                 render: (c) => c.leadId ? (
-                  <button type="button" className="text-primary-text hover:underline text-left" onClick={() => { onClose(); openLead(c.leadId!); }}>
+                  <button type="button" className="text-primary-text hover:underline text-left" onClick={() => openLead(c.leadId!, `${target.name}'s day`)}>
                     {c.leadName} {c.leadStage && <span className={`badge ${stageMeta(c.leadStage).badge} ml-1`}>{stageMeta(c.leadStage).label}</span>}
                   </button>
                 ) : <span className="text-muted-foreground">Not a lead yet</span>,
