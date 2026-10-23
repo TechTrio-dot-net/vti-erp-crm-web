@@ -16,7 +16,7 @@ describe('Leads Status Overview', () => {
     await db.insert(leads).values([
       { companyName: 'Hot due today', assignedTo: bdm.userId, stage: 'PROPOSAL', statusLabel: 'Hot', nextFollowupAt: new Date(now) },
       { companyName: 'Hot late', assignedTo: bdm.userId, stage: 'PROPOSAL', statusLabel: 'Hot', nextFollowupAt: new Date(now - 3 * DAY) },
-      { companyName: 'Not interested (live in old CRM)', assignedTo: bdm.userId, stage: 'LOST', statusLabel: 'Not Interested' },
+      { companyName: 'Not interested', assignedTo: bdm.userId, stage: 'LOST', statusLabel: 'Not Interested' },
       { companyName: 'Lost', assignedTo: bdm.userId, stage: 'LOST', statusLabel: 'Lost' },
       { companyName: 'Lost here', assignedTo: bdm.userId, stage: 'LOST' },
       { companyName: 'Won', assignedTo: bdm.userId, stage: 'WON' },
@@ -26,11 +26,11 @@ describe('Leads Status Overview', () => {
     await db.execute(sql`UPDATE leads SET created_at = now() - interval '10 days' WHERE company_name <> 'New today'`);
 
     const { body } = await as(bdm).get('/api/crm/reports/status-overview').expect(200);
-    expect(body.cards).toMatchObject({ newToday: 1, newTodayPending: 1, live: 4, today: 1, overdue: 2, upcoming: 1, lost: 2 });
+    // A lead marked lost stays lost: "Not Interested" closes a lead here, so it is counted with the lost ones
+    expect(body.cards).toMatchObject({ newToday: 1, newTodayPending: 1, live: 3, today: 1, overdue: 1, upcoming: 1, lost: 3 });
     expect(body.breakdown).toEqual([
       { status: 'Hot', today: 1, yesterday: 0, late: 1, upcoming: 0, total: 2 },
       { status: 'New', today: 0, yesterday: 0, late: 0, upcoming: 1, total: 1 },
-      { status: 'Not Interested', today: 0, yesterday: 0, late: 1, upcoming: 0, total: 1 },
     ]);
 
     const late = await as(bdm).get('/api/crm/reports/status-overview/leads?status=Hot&when=late').expect(200);
@@ -41,7 +41,7 @@ describe('Leads Status Overview', () => {
     const yesterday = await as(bdm).get('/api/crm/reports/status-overview/leads?kind=new-yesterday&pending=1').expect(200);
     expect(yesterday.body.rows).toHaveLength(0);
     const lost = await as(bdm).get('/api/crm/reports/status-overview/leads?kind=lost').expect(200);
-    expect(lost.body.rows).toHaveLength(2);
+    expect(lost.body.rows.map((r: { name: string }) => r.name).sort()).toEqual(['Lost', 'Lost here', 'Not interested']);
   });
 
   it('moves a lead out of its old status when its stage changes here', async () => {

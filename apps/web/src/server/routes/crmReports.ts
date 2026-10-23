@@ -120,11 +120,14 @@ router.get('/dashboard', async (req: AuthRequest, res) => {
 
 /**
  * A lead's status as the old CRM showed it: the status it carried over, or the stage it has reached here.
- * "Lost" is lost; every other status that is not won is live (the old CRM counted "Not Interested" as live).
+ * A closed lead is never live: once it is lost (or won) it stays out of the live counts and lists, whatever
+ * status label it carries — "Not Interested" marks a lead lost here, so it belongs with the lost leads.
  */
 const STATUS = sql.raw(`coalesce(nullif(btrim(l.status_label), ''), CASE l.stage WHEN 'AWARENESS' THEN 'New' WHEN 'CONTACTED' THEN 'Contacted'
   WHEN 'PROPOSAL' THEN 'Interested' WHEN 'NEGOTIATION' THEN 'Hot Closing' WHEN 'WON' THEN 'Closed' ELSE 'Lost' END)`);
-const LIVE = sql`(l.stage <> 'WON' AND ${STATUS} <> 'Lost')`;
+const LIVE = sql`(l.stage NOT IN ('WON', 'LOST') AND ${STATUS} <> 'Lost')`;
+/** Lost: closed as lost here, or still carrying the old CRM's "Lost" status */
+const LOST = sql`(l.stage <> 'WON' AND (l.stage = 'LOST' OR ${STATUS} = 'Lost'))`;
 /** New leads still waiting for their first real conversation */
 const PENDING_STATUSES = ['Fresh', 'New', 'Proposal Call', 'Proposal Call(Fresh)'];
 const OVERVIEW_WHEN = ['today', 'yesterday', 'late', 'upcoming', 'total'] as const;
@@ -156,7 +159,7 @@ router.get('/status-overview', async (req: AuthRequest, res) => {
           count(*) FILTER (WHERE ${LIVE} AND ${whenFilter('today', today)})::int AS "today",
           count(*) FILTER (WHERE ${LIVE} AND ${whenFilter('late', today)})::int AS overdue,
           count(*) FILTER (WHERE ${LIVE} AND ${whenFilter('upcoming', today)})::int AS upcoming,
-          count(*) FILTER (WHERE ${STATUS} = 'Lost' AND l.stage <> 'WON')::int AS lost
+          count(*) FILTER (WHERE ${LOST})::int AS lost
         FROM leads l WHERE l.assigned_to IS NOT NULL ${scope}`),
       rows<{ status: string; today: number; yesterday: number; late: number; upcoming: number; total: number }>(sql`
         SELECT ${STATUS} AS status,
@@ -188,7 +191,7 @@ router.get('/status-overview/leads', async (req: AuthRequest, res) => {
     const q = req.query;
     const when = OVERVIEW_WHEN.includes(q.when as (typeof OVERVIEW_WHEN)[number]) ? String(q.when) : 'total';
     const filters: SQL[] = [];
-    if (q.kind === 'lost') filters.push(sql`${STATUS} = 'Lost' AND l.stage <> 'WON'`);
+    if (q.kind === 'lost') filters.push(LOST);
     else if (q.kind === 'new-today' || q.kind === 'new-yesterday') {
       filters.push(sql`${day('l.created_at')} = (${today}::date - ${q.kind === 'new-today' ? 0 : 1}::int)`);
       if (q.pending === '1') filters.push(sql`${LIVE} AND ${STATUS} IN (${sql.join(PENDING_STATUSES.map((s) => sql`${s}`), sql`, `)})`);

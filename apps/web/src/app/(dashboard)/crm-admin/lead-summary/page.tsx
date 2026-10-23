@@ -186,8 +186,9 @@ function SummaryLeads({ pick, division, manual, onClose }: { pick: Pick | null; 
           <p className="text-sm text-muted-foreground text-center py-8">No leads.</p>
         ) : (
           <div className="divide-y divide-border/50">
+            {/* The list stays open behind the lead, so the drawer's Back comes straight back to it */}
             {data.rows.map((l) => (
-              <button key={l.id} type="button" onClick={() => { onClose(); openLead(l.id); }} className="w-full text-left py-2.5 px-1 hover:bg-muted/30 flex items-center gap-3">
+              <button key={l.id} type="button" onClick={() => openLead(l.id, pick?.title ?? "the list")} className="w-full text-left py-2.5 px-1 hover:bg-muted/30 flex items-center gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold truncate">{l.name}</p>
                   <p className="text-xs text-muted-foreground truncate">{[l.phone, l.assignedName, l.campaign ?? l.source].filter(Boolean).join(" · ")}</p>

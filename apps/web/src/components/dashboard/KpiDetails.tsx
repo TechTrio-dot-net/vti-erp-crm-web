@@ -56,7 +56,7 @@ export function KpiDetails({ kind, onClose }: { kind: KpiKind; onClose: () => vo
           ) : kind === "projects" ? (
             <ProjectList rows={rows as ProjectRow[]} />
           ) : kind === "leads" ? (
-            <LeadList rows={rows as LeadRow[]} onOpen={onClose} />
+            <LeadList rows={rows as LeadRow[]} backTo={meta.title} />
           ) : kind === "clients" ? (
             <ClientList rows={rows as ClientRow[]} />
           ) : (
@@ -93,12 +93,13 @@ function ProjectList({ rows }: { rows: ProjectRow[] }) {
   );
 }
 
-function LeadList({ rows, onOpen }: { rows: LeadRow[]; onOpen: () => void }) {
+function LeadList({ rows, backTo }: { rows: LeadRow[]; backTo: string }) {
   const openLead = useCrmUi((s) => s.openLead);
   return (
     <div className="divide-y divide-border/40">
+      {/* The list stays open behind the lead, so the drawer's Back comes straight back to it */}
       {rows.map((l) => (
-        <button key={l.id} type="button" className={rowClass} onClick={() => { onOpen(); openLead(l.id); }}>
+        <button key={l.id} type="button" className={rowClass} onClick={() => openLead(l.id, backTo)}>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold truncate">{l.company}</p>
             <p className="text-xs text-muted-foreground truncate">
