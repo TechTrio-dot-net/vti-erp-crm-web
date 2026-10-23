@@ -242,6 +242,32 @@ router.get('/leaderboard', async (req: AuthRequest, res) => {
   }
 });
 
+/**
+ * The clients behind one BDM's "Won" number on the Leader Dashboard. Counted the same way the leaderboard
+ * counts them — leads assigned to that BDM in the period that reached WON — so the list matches the column.
+ */
+router.get('/leaderboard/won', async (req: AuthRequest, res) => {
+  try {
+    const { from, to } = dateRange(req.query, 30);
+    // A BDM can only ever open their own; admins pass ?user=
+    const user = bdmScope(req, req.query.user);
+    if (!user) throw new HttpError(400, 'Choose a BDM');
+    const id = optionalId(user, 'user');
+    const data = await rows(sql`
+      SELECT l.id, coalesce(nullif(btrim(l.contact_name), ''), l.company_name) AS name, l.company_name AS "companyName",
+        l.phone, l.email, l.city, l.source, l.campaign, coalesce(s.name, l.service) AS service,
+        l.estimated_value AS "estimatedValue", l.assigned_at AS "assignedAt", l.closed_at AS "closedAt",
+        (SELECT f.note FROM lead_followups f WHERE f.lead_id = l.id ORDER BY f.created_at DESC LIMIT 1) AS "lastNote"
+      FROM leads l LEFT JOIN services s ON s.id = l.service_id
+      WHERE l.assigned_to = ${id} AND l.stage = 'WON' AND ${day('l.assigned_at')} BETWEEN ${from} AND ${to}
+      ORDER BY l.closed_at DESC NULLS LAST, l.assigned_at DESC LIMIT 500`);
+    const total = (data as Array<{ estimatedValue: number | null }>).reduce((sum, r) => sum + Number(r.estimatedValue ?? 0), 0);
+    res.json({ range: { from, to }, total, rows: data });
+  } catch (err) {
+    sendError(res, err, 'Failed to load the won clients');
+  }
+});
+
 /** Follow-ups done vs due per BDM per day */
 router.get('/followups-datewise', async (req: AuthRequest, res) => {
   try {

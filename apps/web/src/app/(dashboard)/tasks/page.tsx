@@ -82,7 +82,7 @@ function TaskDetailDialog({ open, loading, task, users, onClose }: {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-[min(32rem,calc(100vw-2rem))]">
         <DialogHeader>
           <DialogTitle>{loading || !task ? "Loading…" : "Task details"}</DialogTitle>
         </DialogHeader>
@@ -314,7 +314,7 @@ export default function TasksKanbanPage() {
       </div>
       <div className="flex gap-3 overflow-x-auto pb-4">
         {[0,1,2,3,4].map(i => (
-          <div key={i} className="kanban-col flex-shrink-0 border-t-2 border-t-slate-300" style={{ width: 240 }}>
+          <div key={i} className="kanban-col flex-1 basis-0 min-w-[180px] border-t-2 border-t-slate-300">
             <div className="kanban-col-header">
               <Skeleton className="h-4 w-20" />
               <Skeleton className="h-5 w-8 rounded-full" />
@@ -383,8 +383,7 @@ export default function TasksKanbanPage() {
           return (
             <div
               key={key}
-              className={`kanban-col flex-shrink-0 border-t-2 ${color}`}
-              style={{ width: 240 }}
+              className={`kanban-col flex-1 basis-0 min-w-[180px] border-t-2 ${color}`}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
                 e.preventDefault();
@@ -470,7 +469,7 @@ export default function TasksKanbanPage() {
 
       {/* Add Task Dialog */}
       <Dialog open={addOpen} onOpenChange={(o) => { if (!o) { setAddOpen(false); setAddError(""); } }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-[min(32rem,calc(100vw-2rem))]">
           <DialogHeader><DialogTitle>Add Task</DialogTitle></DialogHeader>
           <form
             onSubmit={(e) => {

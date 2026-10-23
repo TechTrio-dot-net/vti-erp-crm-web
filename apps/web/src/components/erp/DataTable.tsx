@@ -32,7 +32,7 @@ export function DataTable<T>({ columns, rows, rowKey, loading, emptyMessage = "N
                 <th
                   key={column.key}
                   scope="col"
-                  className={cn("whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500", column.className)}
+                  className={cn("px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500", column.className)}
                 >
                   {column.header}
                 </th>
@@ -64,7 +64,7 @@ export function DataTable<T>({ columns, rows, rowKey, loading, emptyMessage = "N
                 className={cn("align-top", onRowClick && "cursor-pointer hover:bg-neutral-50")}
               >
                 {columns.map((column) => (
-                  <td key={column.key} className={cn("px-4 py-3 text-neutral-700", column.className)}>
+                  <td key={column.key} className={cn("px-3 py-3 text-neutral-700", column.className)}>
                     {column.cell(row)}
                   </td>
                 ))}

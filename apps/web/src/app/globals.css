@@ -332,13 +332,15 @@ select:focus {
   }
   .data-table thead th {
     text-align: left;
-    padding: 10px 16px;
+    padding: 10px 12px;
     font-size: .6875rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .06em;
     color: var(--muted-foreground);
-    white-space: nowrap;
+    /* Headings wrap rather than hold the column open: a wide report fits its card instead of scrolling sideways */
+    white-space: normal;
+    text-wrap: balance;
   }
   .data-table tbody tr {
     border-bottom: 1px solid hsl(40 8% 92%);
@@ -346,12 +348,23 @@ select:focus {
   }
   .data-table tbody tr:last-child { border-bottom: none; }
   .data-table tbody tr:hover { background: hsl(48 60% 97%); }
-  .data-table tbody td { padding: 12px 16px; }
+  .data-table tbody td { padding: 12px; }
   /* A salesperson who has stopped calling during office hours: the whole row goes red */
   .data-table tbody tr.row-idle { background: hsl(0 84% 57% / .12); box-shadow: inset 3px 0 0 var(--clr-red); }
   .data-table tbody tr.row-idle:hover { background: hsl(0 84% 57% / .18); }
   .data-table tfoot tr { border-top: 2px solid var(--border); }
-  .data-table tfoot td { padding: 12px 16px; }
+  .data-table tfoot td { padding: 12px; }
+}
+
+/* A wide report tightens up as the window narrows, so it keeps fitting instead of scrolling sideways */
+@media (max-width: 1400px) {
+  .data-table thead th { padding: 9px 8px; letter-spacing: .04em; }
+  .data-table tbody td, .data-table tfoot td { padding: 10px 8px; }
+}
+@media (max-width: 1150px) {
+  .data-table { font-size: .8125rem; }
+  .data-table thead th { padding: 8px 6px; letter-spacing: .02em; }
+  .data-table tbody td, .data-table tfoot td { padding: 9px 6px; }
 }
 
 /* ─── Stage funnel ─────────────────────────────────────────────────────── */

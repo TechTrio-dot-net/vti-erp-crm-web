@@ -128,10 +128,11 @@ export default function CallLogPage() {
                   render: (r) => {
                     if (r.date !== today) return <span className="text-muted-foreground">—</span>;
                     const live = callingStatus(r.lastCall);
+                    // Wraps onto a second line on a narrow screen rather than holding the column open
                     return (
-                      <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                        <span className={`size-2 rounded-full ${live.dot}`} />
-                        <span className={live.key === "idle" ? "text-red-600 font-semibold" : ""}>{live.label}</span>
+                      <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                        <span className={`size-2 shrink-0 rounded-full ${live.dot}`} />
+                        <span className={`whitespace-nowrap ${live.key === "idle" ? "text-red-600 font-semibold" : ""}`}>{live.label}</span>
                         <span className="text-xs text-muted-foreground">{live.sub}</span>
                         {live.key === "idle" && (r.idleReason
                           ? <span className="badge badge-amber" title={r.idleReason.note ?? undefined}>{r.idleReason.reason}</span>
