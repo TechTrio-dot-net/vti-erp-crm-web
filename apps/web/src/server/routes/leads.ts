@@ -176,7 +176,8 @@ router.post('/:id/convert', requirePermission('clients', 'create'), async (req, 
 
       await tx
         .update(leads)
-        .set({ stage: 'WON', clientId: client.id, email: contactEmail, updatedBy: authReq.user!.id, lastContactAt: new Date() })
+        // closed_at is what the reports date a win by, so stamp it here too (keeping it if the deal was already closed)
+        .set({ stage: 'WON', clientId: client.id, email: contactEmail, updatedBy: authReq.user!.id, lastContactAt: new Date(), closedAt: lead.closedAt ?? new Date() })
         .where(eq(leads.id, id));
       return client.id;
     });

@@ -22,6 +22,11 @@ router.use(authMiddleware, requireCrm);
 const tz = APP_TIMEZONE;
 /** Business-local date of a raw column expression, e.g. day('l.assigned_at') */
 const day = (column: string) => sql.raw(`(${column} AT TIME ZONE '${tz.replace(/'/g, '')}')::date`);
+/**
+ * The business-local day a lead was closed on, e.g. closedDay('l'). Falls back to updated_at so a deal
+ * closed by an older path that left closed_at empty still lands in the period it was actually won in.
+ */
+const closedDay = (alias: string) => day(`coalesce(${alias}.closed_at, ${alias}.updated_at)`);
 const OPEN = sql.raw(`l.stage NOT IN ('WON', 'LOST')`);
 
 /** The working day in business-local hours: 10:30 am to 7:00 pm */
@@ -211,7 +216,15 @@ router.get('/status-overview/leads', async (req: AuthRequest, res) => {
   }
 });
 
-/** Leader Dashboard — BDM leaderboard for a period */
+/**
+ * Leader Dashboard — BDM leaderboard for a period, ranked by the revenue they closed: what the business is
+ * measured on, so one ₹77,000 deal outranks a dozen small ones. Deals won breaks a tie.
+ *
+ * Workload (assigned, contacted, not contacted, response time) counts the leads handed to the BDM in the
+ * period; Won, Lost and Revenue count the deals they *closed* in it, however long ago the lead came in —
+ * otherwise a deal won today disappears from the board a month after it was assigned, and the Won column
+ * stops matching what the BDM actually converted.
+ */
 router.get('/leaderboard', async (req: AuthRequest, res) => {
   try {
     const { from, to } = dateRange(req.query, 30);
@@ -220,9 +233,9 @@ router.get('/leaderboard', async (req: AuthRequest, res) => {
         count(l.id)::int AS assigned,
         count(l.id) FILTER (WHERE l.first_contact_at IS NOT NULL)::int AS contacted,
         count(l.id) FILTER (WHERE l.stage NOT IN ('WON', 'LOST') AND l.first_contact_at IS NULL)::int AS pending,
-        count(l.id) FILTER (WHERE l.stage = 'WON')::int AS won,
-        count(l.id) FILTER (WHERE l.stage = 'LOST')::int AS lost,
-        coalesce(sum(l.estimated_value) FILTER (WHERE l.stage = 'WON'), 0)::float8 AS "wonValue",
+        (SELECT count(*)::int FROM leads w WHERE w.assigned_to = u.id AND w.stage = 'WON' AND ${closedDay('w')} BETWEEN ${from} AND ${to}) AS won,
+        (SELECT count(*)::int FROM leads w WHERE w.assigned_to = u.id AND w.stage = 'LOST' AND ${closedDay('w')} BETWEEN ${from} AND ${to}) AS lost,
+        (SELECT coalesce(sum(w.estimated_value), 0)::float8 FROM leads w WHERE w.assigned_to = u.id AND w.stage = 'WON' AND ${closedDay('w')} BETWEEN ${from} AND ${to}) AS "wonValue",
         round(coalesce(avg(extract(epoch FROM (l.first_contact_at - l.assigned_at)) / 60) FILTER (WHERE l.first_contact_at >= l.assigned_at), 0))::int AS "avgResponseMins",
         (SELECT count(*)::int FROM lead_followups f WHERE f.user_id = u.id AND ${day('f.created_at')} BETWEEN ${from} AND ${to}) AS followups,
         (SELECT count(*)::int FROM call_logs c WHERE c.user_id = u.id AND c.direction = 'outgoing' AND ${day('c.started_at')} BETWEEN ${from} AND ${to}) AS "callsMade",
@@ -232,9 +245,11 @@ router.get('/leaderboard', async (req: AuthRequest, res) => {
       LEFT JOIN leads l ON l.assigned_to = u.id AND ${day('l.assigned_at')} BETWEEN ${from} AND ${to}
       WHERE u.role = ${BDM_ROLE} AND u.is_active
       GROUP BY u.id
-      ORDER BY won DESC, "wonValue" DESC, contacted DESC`);
+      ORDER BY "wonValue" DESC, won DESC, contacted DESC`);
     res.json({
       range: { from, to },
+      // Deals closed in the period against leads taken in it — the two can cover different leads, so a BDM
+      // clearing a backlog of older leads can read above 100%.
       rows: (data as Array<Record<string, number>>).map((r) => ({ ...r, conversionRate: r.assigned ? Math.round((r.won / r.assigned) * 1000) / 10 : 0 })),
     });
   } catch (err) {
@@ -244,7 +259,10 @@ router.get('/leaderboard', async (req: AuthRequest, res) => {
 
 /**
  * The clients behind one BDM's "Won" number on the Leader Dashboard. Counted the same way the leaderboard
- * counts them — leads assigned to that BDM in the period that reached WON — so the list matches the column.
+ * counts them — every lead of theirs closed as WON inside the period — so the list matches the column.
+ *
+ * The answer names whose list it is: a BDM asking for a colleague's gets their own back (bdmScope), and the
+ * screen has to label it with the name that came back, not the one that was clicked.
  */
 router.get('/leaderboard/won', async (req: AuthRequest, res) => {
   try {
@@ -253,16 +271,18 @@ router.get('/leaderboard/won', async (req: AuthRequest, res) => {
     const user = bdmScope(req, req.query.user);
     if (!user) throw new HttpError(400, 'Choose a BDM');
     const id = optionalId(user, 'user');
+    const [owner] = await rows<{ id: string; name: string }>(sql`SELECT id, name FROM users WHERE id = ${id}`);
+    if (!owner) throw new HttpError(404, 'BDM not found');
     const data = await rows(sql`
       SELECT l.id, coalesce(nullif(btrim(l.contact_name), ''), l.company_name) AS name, l.company_name AS "companyName",
         l.phone, l.email, l.city, l.source, l.campaign, coalesce(s.name, l.service) AS service,
         l.estimated_value AS "estimatedValue", l.assigned_at AS "assignedAt", l.closed_at AS "closedAt",
         (SELECT f.note FROM lead_followups f WHERE f.lead_id = l.id ORDER BY f.created_at DESC LIMIT 1) AS "lastNote"
       FROM leads l LEFT JOIN services s ON s.id = l.service_id
-      WHERE l.assigned_to = ${id} AND l.stage = 'WON' AND ${day('l.assigned_at')} BETWEEN ${from} AND ${to}
+      WHERE l.assigned_to = ${id} AND l.stage = 'WON' AND ${closedDay('l')} BETWEEN ${from} AND ${to}
       ORDER BY l.closed_at DESC NULLS LAST, l.assigned_at DESC LIMIT 500`);
     const total = (data as Array<{ estimatedValue: number | null }>).reduce((sum, r) => sum + Number(r.estimatedValue ?? 0), 0);
-    res.json({ range: { from, to }, total, rows: data });
+    res.json({ range: { from, to }, user: owner, total, rows: data });
   } catch (err) {
     sendError(res, err, 'Failed to load the won clients');
   }
