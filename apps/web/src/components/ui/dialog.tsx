@@ -32,8 +32,10 @@ const DialogContent = React.forwardRef<
       ref={ref}
       aria-describedby={undefined}
       className={cn(
-        // Never wider than the viewport, so a dialog's content has every pixel there is and still clears the edges
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-[min(32rem,calc(100vw-2rem))] translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-xl rounded-lg",
+        // Never wider than the viewport, so a dialog's content has every pixel there is and still clears the edges.
+        // The column is capped at the dialog's width: without it a wide child (a table) sizes the grid to its own
+        // content and the whole dialog scrolls sideways, instead of the table scrolling inside its own wrapper.
+        "fixed left-[50%] top-[50%] z-50 grid grid-cols-[minmax(0,1fr)] w-full max-w-[min(32rem,calc(100vw-2rem))] translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-xl rounded-lg",
         className
       )}
       {...props}
