@@ -51,6 +51,9 @@ export type FollowupOutcome =
   | 'CONVERTED'
   | 'LOST';
 export type AssignmentReason = 'auto' | 'manual' | 'transfer' | 'leave' | 'campaign';
+/** 'reorder': they order every month and this month's order is not in yet. 'winback': they skipped a month. */
+export type ReminderKind = 'reorder' | 'winback';
+export type ReminderAction = 'called' | 'skipped';
 export type LeadSourceType = 'google_sheet' | 'meta';
 export type LeadImportStatus = 'imported' | 'duplicate' | 'error' | 'ignored';
 
@@ -486,6 +489,49 @@ export const leadAssignments = pgTable(
     createdAt: ts().notNull().defaultNow(),
   },
   (t) => [index().on(t.leadId), index().on(t.toUserId, t.createdAt), index().on(t.createdAt)]
+);
+
+/**
+ * Retargeting: the old leads handed back to the BDM who already owns them, in a daily batch they ask for
+ * themselves. One row per lead for good - that unique index is what keeps every day's batch new, so the
+ * team works forward through the history instead of ringing the same numbers again next week.
+ */
+export const leadRetargets = pgTable(
+  'lead_retargets',
+  {
+    id: id(),
+    leadId: uuid().notNull().references(() => leads.id, { onDelete: 'cascade' }),
+    userId: uuid().notNull().references(() => users.id, { onDelete: 'cascade' }),
+    /** The business-local day the batch was handed out on, so the daily limit counts in local time */
+    batchDate: date().notNull(),
+    byUserId: uuid().references(() => users.id, { onDelete: 'set null' }),
+    createdAt: ts().notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex().on(t.leadId), index().on(t.userId, t.batchDate), index().on(t.batchDate)]
+);
+
+/**
+ * What a BDM did about a customer's monthly re-order reminder. The reminders themselves are worked out
+ * from the order history every time they are asked for, so this table only records the answer - which is
+ * also what takes the customer off the pop-up for the rest of the month.
+ */
+export const reorderReminders = pgTable(
+  'reorder_reminders',
+  {
+    id: id(),
+    /** The customer: their client id when they have one, otherwise their phone number */
+    customerKey: text().notNull(),
+    /** The lead the reminder was shown against, for the lead drawer the BDM opens from it */
+    leadId: uuid().references(() => leads.id, { onDelete: 'set null' }),
+    userId: uuid().notNull().references(() => users.id, { onDelete: 'cascade' }),
+    /** The month the reminder belongs to, as YYYY-MM */
+    monthKey: text().notNull(),
+    kind: text().$type<ReminderKind>().notNull(),
+    action: text().$type<ReminderAction>().notNull(),
+    note: text(),
+    createdAt: ts().notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex().on(t.customerKey, t.monthKey), index().on(t.userId, t.monthKey), index().on(t.monthKey)]
 );
 
 /** Start/Stop working sessions of a BDM (drives rotation and BDM time analysis) */

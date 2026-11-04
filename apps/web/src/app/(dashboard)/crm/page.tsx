@@ -78,7 +78,7 @@ export default function CrmDashboardPage() {
             <LeadList
               title="New leads — not contacted"
               empty="Every lead has been contacted."
-              rows={data.fresh.map((l) => ({ id: l.id, primary: l.name, secondary: [l.phone, l.campaign ?? l.source, !isBdm(user?.role) ? l.assignedName : null].filter(Boolean).join(" · "), right: timeAgo(l.assignedAt), badge: { label: "New", badge: "badge-red" } }))}
+              rows={data.fresh.map((l) => ({ id: l.id, primary: l.name, secondary: [l.phone, l.campaign ?? l.source, !isBdm(user?.role) ? l.assignedName : null].filter(Boolean).join(" · "), right: timeAgo(l.assignedAt), badge: { label: "New", badge: "badge-orange" } }))}
               onOpen={openLead}
               href="/crm/leads?status=pending"
             />

@@ -500,7 +500,7 @@ export default function UsersPage() {
 
       {/* ── Delete confirmation dialog ── */}
       <Dialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-[min(24rem,calc(100vw-2rem))]">
           <DialogHeader>
             <DialogTitle>Delete User</DialogTitle>
           </DialogHeader>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Clock, Hourglass, Phone, PhoneMissed, PhoneOutgoing } from "lucide-react";
 import { api } from "@/lib/api";
-import { fmtDateTime } from "@/lib/crm";
+import { STATUS_DOT, fmtDateTime, statusBadge, statusTone } from "@/lib/crm";
 import { useCrmUi } from "@/store/crm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ErrorState, LoadingBlock } from "@/components/crm/ui";
@@ -33,9 +33,8 @@ const WHEN = [
   ["total", "Total"],
 ] as const;
 
-/** Status dot colours as in the old CRM */
-const dot = (status: string) =>
-  /hot closing/i.test(status) ? "bg-red-500" : /^hot$/i.test(status) ? "bg-orange-400" : /fresh/i.test(status) ? "bg-blue-500" : "bg-emerald-500";
+/** Status dots in the four pipeline colours, same grouping as the badges */
+const dot = (status: string) => STATUS_DOT[statusTone(status)];
 
 const hms = (sec: number) => [Math.floor(sec / 3600), Math.floor((sec % 3600) / 60), sec % 60].map((n) => String(n).padStart(2, "0")).join(":");
 
@@ -142,8 +141,9 @@ export function StatusOverview({ bdm }: { bdm: string }) {
           <p className="font-semibold">Today</p>
           {([
             [Phone, "bg-sky-600", "Total Calls", calls.total],
-            [PhoneOutgoing, "bg-emerald-600", "Connected", calls.connected],
-            [PhoneMissed, "bg-red-600", "Not Connected", calls.notConnected],
+            // Connected and Not Connected carry the pipeline's yellow and orange
+            [PhoneOutgoing, "bg-yellow-500", "Connected", calls.connected],
+            [PhoneMissed, "bg-orange-500", "Not Connected", calls.notConnected],
             [Clock, "bg-amber-500", "Call Duration", hms(calls.durationSec)],
             [Hourglass, "bg-violet-600", "Pending Calls", calls.pending],
           ] as const).map(([Icon, tone, label, value]) => (
@@ -171,7 +171,7 @@ function OverviewLeads({ pick, scope, onClose }: { pick: Pick | null; scope: str
   });
   return (
     <Dialog open={!!pick} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-[min(48rem,calc(100vw-2rem))] max-h-[85vh] overflow-y-auto">
         <DialogHeader><DialogTitle>{pick?.title}{data ? ` · ${data.rows.length}` : ""}</DialogTitle></DialogHeader>
         {isError ? <ErrorState message="Could not load these leads — try again" /> : !data ? <LoadingBlock rows={4} /> : data.rows.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">No leads.</p>
@@ -184,7 +184,7 @@ function OverviewLeads({ pick, scope, onClose }: { pick: Pick | null; scope: str
                   <p className="text-sm font-semibold truncate">{l.name}</p>
                   <p className="text-xs text-muted-foreground truncate">{[l.phone, l.assignedName].filter(Boolean).join(" · ")}</p>
                 </div>
-                <span className="badge badge-gray">{l.status}</span>
+                <span className={`badge ${statusBadge(l.status)}`}>{l.status}</span>
                 <span className="text-xs tabular-nums w-32 text-right text-muted-foreground">{l.nextFollowupAt ? fmtDateTime(l.nextFollowupAt) : "No follow-up"}</span>
               </button>
             ))}

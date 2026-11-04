@@ -157,7 +157,7 @@ export default function EmployeesPage() {
       )}
 
       <Dialog open={creating || !!editing} onOpenChange={(o) => { if (!o) close(); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[min(42rem,calc(100vw-2rem))] max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editing ? `Edit ${editing.name}` : "Add employee"}</DialogTitle></DialogHeader>
           <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); save.mutate(); }}>
             <div className="grid grid-cols-2 gap-3">

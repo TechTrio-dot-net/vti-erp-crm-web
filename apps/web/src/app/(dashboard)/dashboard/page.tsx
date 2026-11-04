@@ -23,8 +23,8 @@ function formatRevenue(n: number) {
 }
 
 const STAGE_COLORS: Record<string, string> = {
-  AWARENESS: "badge badge-gray", CONTACTED: "badge badge-blue",
-  PROPOSAL: "badge badge-purple", NEGOTIATION: "badge badge-amber",
+  AWARENESS: "badge badge-orange", CONTACTED: "badge badge-yellow",
+  PROPOSAL: "badge badge-yellow", NEGOTIATION: "badge badge-yellow",
   WON: "badge badge-green", LOST: "badge badge-red",
 };
 

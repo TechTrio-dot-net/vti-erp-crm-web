@@ -1,7 +1,7 @@
 import express, { Router, type Response } from 'express';
 import { and, count, desc, eq, isNull, sql, type SQL } from 'drizzle-orm';
 import { db } from '../db/index';
-import { bdmIdleReasons, callLogs, callRecordings, leads, mobileDevices, users, type CallDirection } from '../db/schema';
+import { bdmIdleReasons, callLogs, callRecordings, leadFollowups, leads, mobileDevices, users, type CallDirection } from '../db/schema';
 import { authMiddleware, type AuthRequest } from '../lib/auth';
 import { BDM_ROLE, bdmScope, dateRange, isCrmAdmin, localDate, normalizePhone, requireCrm, requireCrmAdmin } from '../lib/crm';
 import { HttpError, optionalId, sendError, uuidParam } from '../lib/http';
@@ -239,6 +239,15 @@ router.get('/', async (req: AuthRequest, res) => {
           leadName: sql<string>`coalesce(nullif(btrim(${leads.contactName}), ''), ${leads.companyName})`,
           leadStage: leads.stage,
           leadOwner: leads.assignedTo,
+          /**
+           * How the BDM said the call went, off the after-call form. A call can carry more than one
+           * follow-up, so the newest wins; a call nobody wrote up comes back null and the lead's stage
+           * stands in for it on the client.
+           */
+          outcome: sql<string | null>`(
+            SELECT lf.outcome FROM ${leadFollowups} lf
+            WHERE lf.call_log_id = ${callLogs.id} ORDER BY lf.created_at DESC LIMIT 1
+          )`,
         })
         .from(callLogs)
         .leftJoin(users, eq(users.id, callLogs.userId))

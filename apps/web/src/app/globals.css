@@ -3,108 +3,121 @@
 /* ─── Design Tokens ────────────────────────────────────────────────────── */
 :root {
   /* Voice Tunes India logo colours: yellow #FCCC13 and black */
-  --brand-yellow:        #fccc13;
-  --brand-black:         #000000;
+  --brand-yellow: #fccc13;
+  --brand-black: #000000;
 
   /* Surface */
-  --background:          hsl(45 20% 97%);
-  --foreground:          hsl(0 0% 7%);
-  --card:                hsl(0 0% 100%);
-  --card-foreground:     hsl(0 0% 7%);
-  --popover:             hsl(0 0% 100%);
-  --popover-foreground:  hsl(0 0% 7%);
+  --background: hsl(45 20% 97%);
+  --foreground: hsl(0 0% 7%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(0 0% 7%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(0 0% 7%);
 
   /* Brand: yellow buttons and highlights with black text */
-  --primary:             var(--brand-yellow);
-  --primary-foreground:  var(--brand-black);
+  --primary: var(--brand-yellow);
+  --primary-foreground: var(--brand-black);
   /* Yellow is unreadable as text on white, so text and icons "in brand colour" use this deep gold */
-  --primary-text:        hsl(45 100% 27%);
+  --primary-text: hsl(45 100% 27%);
 
   /* Neutrals */
-  --secondary:           hsl(45 10% 94%);
-  --secondary-foreground:hsl(0 0% 9%);
-  --muted:               hsl(45 10% 94%);
-  --muted-foreground:    hsl(0 0% 40%);
-  --accent:              hsl(48 97% 92%);
-  --accent-foreground:   hsl(0 0% 9%);
+  --secondary: hsl(45 10% 94%);
+  --secondary-foreground: hsl(0 0% 9%);
+  --muted: hsl(45 10% 94%);
+  --muted-foreground: hsl(0 0% 40%);
+  --accent: hsl(48 97% 92%);
+  --accent-foreground: hsl(0 0% 9%);
 
   /* Feedback */
-  --destructive:         hsl(0 84% 58%);
+  --destructive: var(--clr-red);
   --destructive-foreground: hsl(0 0% 100%);
 
   /* Border / Input */
-  --border:   hsl(40 8% 87%);
-  --input:    hsl(40 8% 85%);
-  --ring:     hsl(46 100% 42%);
+  --border: hsl(40 8% 87%);
+  --input: hsl(40 8% 85%);
+  --ring: hsl(46 100% 42%);
 
   /* Radius */
   --radius: 0.75rem;
 
   /* Sidebar (black, like the logo) */
-  --sb-bg:     hsl(0 0% 4%);
+  --sb-bg: hsl(0 0% 4%);
   --sb-border: hsl(0 0% 15%);
-  --sb-muted:  hsl(0 0% 68%);
-  --sb-hover:  hsl(0 0% 12%);
+  --sb-muted: hsl(0 0% 68%);
+  --sb-hover: hsl(0 0% 12%);
   --sb-active: hsl(0 0% 16%);
 
   /* Semantic shadows */
-  --shadow-xs: 0 1px 2px rgb(0 0 0 / .04);
-  --shadow-sm: 0 1px 3px rgb(0 0 0 / .07), 0 1px 2px -1px rgb(0 0 0 / .06);
-  --shadow-md: 0 4px 8px -2px rgb(0 0 0 / .08), 0 2px 4px -2px rgb(0 0 0 / .06);
-  --shadow-lg: 0 12px 24px -4px rgb(0 0 0 / .09), 0 4px 8px -4px rgb(0 0 0 / .06);
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 1px 3px rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  --shadow-md:
+    0 4px 8px -2px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --shadow-lg:
+    0 12px 24px -4px rgb(0 0 0 / 0.09), 0 4px 8px -4px rgb(0 0 0 / 0.06);
 
   /* Status colors */
-  --clr-green:  hsl(142 71% 42%);
-  --clr-amber:  hsl(38  92% 48%);
-  --clr-red:    hsl(0   84% 57%);
-  --clr-blue:   hsl(217 91% 58%);
+  --clr-green: #13700c;
+  --clr-amber: hsl(38 92% 48%);
+  --clr-red: #a01a00;
+  /* Call-volume bars. Its own colour, not the logo yellow, so the brand stays put if either moves */
+  --clr-yellow: #e7ed34;
+  --clr-blue: hsl(217 91% 58%);
   --clr-purple: hsl(258 90% 62%);
-  --clr-sky:    hsl(199 89% 55%);
-  --clr-gray:   hsl(0 0% 55%);
+  --clr-sky: hsl(199 89% 55%);
+  --clr-gray: hsl(0 0% 55%);
+
+  /*
+   * Pipeline status at full strength — not reachable, connected, converted, lost. Rows and badges both
+   * draw from these, so a row and the badge sitting on it can never drift apart.
+   */
+  --row-orange: #ca8903;
+  --row-yellow: #d7d728;
+  --row-green: #50b211;
+  --row-red: #bb290a;
 }
 
 .dark {
   --background: hsl(0 0% 5%);
   --foreground: hsl(0 0% 96%);
-  --card:       hsl(0 0% 9%);
+  --card: hsl(0 0% 9%);
   --card-foreground: hsl(0 0% 96%);
-  --popover:    hsl(0 0% 9%);
+  --popover: hsl(0 0% 9%);
   --popover-foreground: hsl(0 0% 96%);
-  --primary:    var(--brand-yellow);
+  --primary: var(--brand-yellow);
   --primary-foreground: var(--brand-black);
   --primary-text: var(--brand-yellow);
-  --secondary:  hsl(0 0% 15%);
+  --secondary: hsl(0 0% 15%);
   --secondary-foreground: hsl(0 0% 96%);
-  --muted:      hsl(0 0% 15%);
+  --muted: hsl(0 0% 15%);
   --muted-foreground: hsl(0 0% 65%);
-  --accent:     hsl(0 0% 15%);
+  --accent: hsl(0 0% 15%);
   --accent-foreground: hsl(0 0% 96%);
-  --destructive: hsl(0 62% 48%);
+  --destructive: color-mix(in oklab, var(--clr-red) 88%, black);
   --destructive-foreground: hsl(0 0% 98%);
-  --border:     hsl(0 0% 17%);
-  --input:      hsl(0 0% 17%);
-  --ring:       var(--brand-yellow);
+  --border: hsl(0 0% 17%);
+  --input: hsl(0 0% 17%);
+  --ring: var(--brand-yellow);
 }
 
 @theme inline {
-  --color-background:           var(--background);
-  --color-foreground:           var(--foreground);
-  --color-card:                 var(--card);
-  --color-card-foreground:      var(--card-foreground);
-  --color-primary:              var(--primary);
-  --color-primary-foreground:   var(--primary-foreground);
-  --color-primary-text:         var(--primary-text);
-  --color-secondary:            var(--secondary);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-text: var(--primary-text);
+  --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted:                var(--muted);
-  --color-muted-foreground:     var(--muted-foreground);
-  --color-accent:               var(--accent);
-  --color-accent-foreground:    var(--accent-foreground);
-  --color-destructive:          var(--destructive);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --color-border:               var(--border);
-  --color-input:                var(--input);
-  --color-ring:                 var(--ring);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
   --radius-sm: calc(var(--radius) - 6px);
   --radius-md: calc(var(--radius) - 4px);
   --radius-lg: var(--radius);
@@ -121,12 +134,62 @@
   --color-brand: #fccc13;
   --color-ink: #000000;
   --color-paper: #ffffff;
-  --color-brand-dark: color-mix(in oklab, var(--color-brand) 60%, var(--color-ink));
+  --color-brand-dark: color-mix(
+    in oklab,
+    var(--color-brand) 60%,
+    var(--color-ink)
+  );
+
+  /*
+   * House red and green. Components reach for these as Tailwind shades (text-red-600,
+   * text-emerald-700, bg-emerald-400), so the scales are rebuilt around the two brand hexes
+   * instead of Tailwind's defaults — otherwise a token change here and a utility class there
+   * drift into two different reds. Each ramp is anchored on the exact hex at the shade whose
+   * lightness it already matches (red at 600, green at 700) and mixed toward white or black
+   * from there, so the existing shade numbers keep their relative weights.
+   */
+  --color-red-50: color-mix(in oklab, var(--clr-red) 5%, white);
+  --color-red-100: color-mix(in oklab, var(--clr-red) 11%, white);
+  --color-red-200: color-mix(in oklab, var(--clr-red) 22%, white);
+  --color-red-300: color-mix(in oklab, var(--clr-red) 38%, white);
+  --color-red-400: color-mix(in oklab, var(--clr-red) 60%, white);
+  --color-red-500: color-mix(in oklab, var(--clr-red) 90%, white);
+  --color-red-600: var(--clr-red);
+  --color-red-700: color-mix(in oklab, var(--clr-red) 86%, black);
+  --color-red-800: color-mix(in oklab, var(--clr-red) 70%, black);
+  --color-red-900: color-mix(in oklab, var(--clr-red) 55%, black);
+
+  --color-emerald-50: color-mix(in oklab, var(--clr-green) 5%, white);
+  --color-emerald-100: color-mix(in oklab, var(--clr-green) 11%, white);
+  --color-emerald-200: color-mix(in oklab, var(--clr-green) 20%, white);
+  --color-emerald-300: color-mix(in oklab, var(--clr-green) 32%, white);
+  --color-emerald-400: color-mix(in oklab, var(--clr-green) 48%, white);
+  --color-emerald-500: color-mix(in oklab, var(--clr-green) 72%, white);
+  /* 600 and 700 both carry body text, so they stay on the real green rather than a washed-out mix */
+  --color-emerald-600: color-mix(in oklab, var(--clr-green) 92%, white);
+  --color-emerald-700: var(--clr-green);
+  --color-emerald-800: color-mix(in oklab, var(--clr-green) 82%, black);
+  --color-emerald-900: color-mix(in oklab, var(--clr-green) 65%, black);
+
+  --color-green-50: var(--color-emerald-50);
+  --color-green-100: var(--color-emerald-100);
+  --color-green-200: var(--color-emerald-200);
+  --color-green-300: var(--color-emerald-300);
+  --color-green-400: var(--color-emerald-400);
+  --color-green-500: var(--color-emerald-500);
+  --color-green-600: var(--color-emerald-600);
+  --color-green-700: var(--color-emerald-700);
+  --color-green-800: var(--color-emerald-800);
+  --color-green-900: var(--color-emerald-900);
 }
 
 @media print {
-  .no-print { display: none !important; }
-  body { background: #fff; }
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
 }
 
 /* Quotations print on A4 with the letterhead edge to edge */
@@ -136,26 +199,44 @@
 }
 
 /* ─── Base ─────────────────────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans, system-ui, -apple-system, sans-serif);
-  font-feature-settings: "rlig" 1, "calt" 1;
+  font-feature-settings:
+    "rlig" 1,
+    "calt" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.5;
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: hsl(40 6% 78%); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: hsl(40 6% 62%); }
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(40 6% 78%);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(40 6% 62%);
+}
 
 /* Selection */
-::selection { background: hsl(48 97% 53% / .35); }
+::selection {
+  background: hsl(48 97% 53% / 0.35);
+}
 
 /* Focus ring */
 :focus-visible {
@@ -172,51 +253,100 @@ select {
   background-position: right 10px center;
   padding-right: 32px !important;
   cursor: pointer;
-  transition: border-color .15s, box-shadow .15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 select:focus {
   outline: none;
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px hsl(48 97% 53% / .3);
+  box-shadow: 0 0 0 3px hsl(48 97% 53% / 0.3);
 }
 
 /* ─── Animations ───────────────────────────────────────────────────────── */
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 @keyframes slide-in {
-  from { opacity: 0; transform: translateX(-6px); }
-  to   { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 @keyframes slide-in-left {
-  from { transform: translateX(-100%); }
-  to   { transform: translateX(0); }
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 @keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: .4; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
-.animate-fade-up      { animation: fade-up .3s ease both; }
-.animate-fade-in      { animation: fade-in .2s ease both; }
-.animate-slide-in     { animation: slide-in .25s ease both; }
-.animate-slide-in-left { animation: slide-in-left .25s ease both; }
+.animate-fade-up {
+  animation: fade-up 0.3s ease both;
+}
+.animate-fade-in {
+  animation: fade-in 0.2s ease both;
+}
+.animate-slide-in {
+  animation: slide-in 0.25s ease both;
+}
+.animate-slide-in-left {
+  animation: slide-in-left 0.25s ease both;
+}
 
 /* Stagger children */
-.stagger > *:nth-child(1) { animation-delay: 0ms; }
-.stagger > *:nth-child(2) { animation-delay: 60ms; }
-.stagger > *:nth-child(3) { animation-delay: 120ms; }
-.stagger > *:nth-child(4) { animation-delay: 180ms; }
-.stagger > *:nth-child(5) { animation-delay: 240ms; }
-.stagger > *:nth-child(6) { animation-delay: 300ms; }
+.stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.stagger > *:nth-child(2) {
+  animation-delay: 60ms;
+}
+.stagger > *:nth-child(3) {
+  animation-delay: 120ms;
+}
+.stagger > *:nth-child(4) {
+  animation-delay: 180ms;
+}
+.stagger > *:nth-child(5) {
+  animation-delay: 240ms;
+}
+.stagger > *:nth-child(6) {
+  animation-delay: 300ms;
+}
 
 /* ─── Sidebar ──────────────────────────────────────────────────────────── */
-.sidebar { background: var(--sb-bg); }
+.sidebar {
+  background: var(--sb-bg);
+}
 
 .sidebar-item {
   display: flex;
@@ -228,7 +358,9 @@ select:focus {
   font-weight: 500;
   color: var(--sb-muted);
   position: relative;
-  transition: background .15s, color .15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
   cursor: pointer;
   user-select: none;
 }
@@ -241,15 +373,20 @@ select:focus {
   color: var(--brand-yellow);
 }
 .sidebar-item.active::before {
-  content: '';
+  content: "";
   position: absolute;
-  left: 0; top: 18%; height: 64%; width: 3px;
+  left: 0;
+  top: 18%;
+  height: 64%;
+  width: 3px;
   border-radius: 0 3px 3px 0;
   background: var(--brand-yellow);
 }
 
 /* ─── Page layout ──────────────────────────────────────────────────────── */
-.page { animation: fade-up .25s ease both; }
+.page {
+  animation: fade-up 0.25s ease both;
+}
 
 .page-header {
   display: flex;
@@ -260,12 +397,12 @@ select:focus {
 .page-title {
   font-size: 1.375rem;
   font-weight: 700;
-  letter-spacing: -.02em;
+  letter-spacing: -0.02em;
   color: var(--foreground);
   line-height: 1.25;
 }
 .page-subtitle {
-  font-size: .8125rem;
+  font-size: 0.8125rem;
   color: var(--muted-foreground);
   margin-top: 3px;
 }
@@ -278,7 +415,9 @@ select:focus {
   box-shadow: var(--shadow-xs);
 }
 .card-lift {
-  transition: box-shadow .2s ease, transform .2s ease;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 .card-lift:hover {
   box-shadow: var(--shadow-md);
@@ -286,46 +425,142 @@ select:focus {
 }
 
 /* KPI accent tops */
-.kpi-blue   { border-top: 3px solid var(--brand-yellow); }
-.kpi-green  { border-top: 3px solid var(--clr-green); }
-.kpi-amber  { border-top: 3px solid var(--clr-amber); }
-.kpi-purple { border-top: 3px solid var(--clr-purple); }
-.kpi-sky    { border-top: 3px solid var(--brand-black); }
-.kpi-red    { border-top: 3px solid var(--clr-red); }
+.kpi-blue {
+  border-top: 3px solid var(--brand-yellow);
+}
+.kpi-green {
+  border-top: 3px solid var(--clr-green);
+}
+.kpi-amber {
+  border-top: 3px solid var(--clr-amber);
+}
+.kpi-purple {
+  border-top: 3px solid var(--clr-purple);
+}
+.kpi-sky {
+  border-top: 3px solid var(--brand-black);
+}
+.kpi-red {
+  border-top: 3px solid var(--clr-red);
+}
 
 /* Icon chips */
-.icon-chip { display:flex; align-items:center; justify-content:center; border-radius:10px; flex-shrink:0; }
-.icon-chip-blue   { background: hsl(48 97% 53% / .22); color: hsl(45 100% 24%); }
-.icon-chip-green  { background: hsl(142 71% 42% / .1); color: hsl(142 71% 36%); }
-.icon-chip-amber  { background: hsl(38  92% 48% / .1); color: hsl(38  92% 40%); }
-.icon-chip-purple { background: hsl(258 90% 62% / .1); color: hsl(258 90% 52%); }
-.icon-chip-sky    { background: var(--brand-black); color: var(--brand-yellow); }
-.icon-chip-red    { background: hsl(0   84% 57% / .1); color: hsl(0   84% 48%); }
+.icon-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.icon-chip-blue {
+  background: hsl(48 97% 53% / 0.22);
+  color: hsl(45 100% 24%);
+}
+.icon-chip-green {
+  background: color-mix(in oklab, var(--clr-green) 10%, transparent);
+  color: var(--clr-green);
+}
+.icon-chip-amber {
+  background: hsl(38 92% 48% / 0.1);
+  color: hsl(38 92% 40%);
+}
+.icon-chip-purple {
+  background: hsl(258 90% 62% / 0.1);
+  color: hsl(258 90% 52%);
+}
+.icon-chip-sky {
+  background: var(--brand-black);
+  color: var(--brand-yellow);
+}
+.icon-chip-red {
+  background: color-mix(in oklab, var(--clr-red) 10%, transparent);
+  color: color-mix(in oklab, var(--clr-red) 92%, black);
+}
 
 /* ─── Badges ───────────────────────────────────────────────────────────── */
 .badge {
-  display: inline-flex; align-items: center;
-  font-size: .6875rem; font-weight: 600; letter-spacing: .02em;
-  padding: 2px 9px; border-radius: 99px; line-height: 1.7;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 2px 9px;
+  border-radius: 99px;
+  line-height: 1.7;
   white-space: nowrap;
 }
-.badge-green  { background: hsl(142 71% 42% / .12); color: hsl(142 71% 30%); }
-.badge-amber  { background: hsl(38  92% 48% / .14); color: hsl(38  92% 33%); }
-.badge-red    { background: hsl(0   84% 57% / .12); color: hsl(0   84% 44%); }
-.badge-blue   { background: hsl(217 91% 58% / .12); color: hsl(217 91% 42%); }
-.badge-sky    { background: hsl(199 89% 55% / .12); color: hsl(199 89% 36%); }
-.badge-purple { background: hsl(258 90% 62% / .12); color: hsl(258 90% 46%); }
-.badge-gray   { background: hsl(0 0% 50% / .12); color: hsl(0 0% 35%); }
+/*
+ * Lead status: orange = nobody on the line yet, yellow = a live conversation, green = won, red = dead.
+ * Opaque fills with a hairline ring - the data table stripes its rows cream, and a low-alpha tint on top
+ * of that washes out to near-white (yellow worst of all). Keep all four at the same strength.
+ */
+.badge-green {
+  background: var(--row-green);
+  color: #0b1703;
+  --badge-edge: color-mix(in oklab, var(--row-green) 68%, black);
+  box-shadow: inset 0 0 0 1px var(--badge-edge);
+}
+.badge-amber {
+  background: hsl(38 92% 48% / 0.14);
+  color: hsl(38 92% 33%);
+}
+.badge-orange {
+  background: var(--row-orange);
+  color: #1b1203;
+  --badge-edge: color-mix(in oklab, var(--row-orange) 68%, black);
+  box-shadow: inset 0 0 0 1px var(--badge-edge);
+}
+.badge-yellow {
+  background: var(--row-yellow);
+  color: #1b1b02;
+  --badge-edge: color-mix(in oklab, var(--row-yellow) 62%, black);
+  box-shadow: inset 0 0 0 1px var(--badge-edge);
+}
+.badge-red {
+  background: var(--row-red);
+  color: #fff;
+  --badge-edge: color-mix(in oklab, var(--row-red) 68%, black);
+  box-shadow: inset 0 0 0 1px var(--badge-edge);
+}
+.badge-blue {
+  background: hsl(217 91% 58% / 0.12);
+  color: hsl(217 91% 42%);
+}
+.badge-sky {
+  background: hsl(199 89% 55% / 0.12);
+  color: hsl(199 89% 36%);
+}
+.badge-purple {
+  background: hsl(258 90% 62% / 0.12);
+  color: hsl(258 90% 46%);
+}
+.badge-gray {
+  background: hsl(0 0% 50% / 0.12);
+  color: hsl(0 0% 35%);
+}
 
 /* Priority badges */
-.priority-high   { background: hsl(0   84% 57% / .1); color: hsl(0   84% 44%); }
-.priority-medium { background: hsl(38  92% 48% / .1); color: hsl(38  92% 33%); }
-.priority-low    { background: hsl(142 71% 42% / .1); color: hsl(142 71% 30%); }
+.priority-high {
+  background: color-mix(in oklab, var(--clr-red) 10%, transparent);
+  color: color-mix(in oklab, var(--clr-red) 88%, black);
+}
+.priority-medium {
+  background: hsl(38 92% 48% / 0.1);
+  color: hsl(38 92% 33%);
+}
+.priority-low {
+  background: color-mix(in oklab, var(--clr-green) 10%, transparent);
+  color: var(--clr-green);
+}
 
 /* ─── Data table ───────────────────────────────────────────────────────── */
 /* In the components layer so a page's own utilities (text-right, padding, row colours) win over these defaults */
 @layer components {
-  .data-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
   .data-table thead tr {
     background: hsl(45 12% 96%);
     border-bottom: 1px solid var(--border);
@@ -333,10 +568,10 @@ select:focus {
   .data-table thead th {
     text-align: left;
     padding: 10px 12px;
-    font-size: .6875rem;
+    font-size: 0.6875rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: .06em;
+    letter-spacing: 0.06em;
     color: var(--muted-foreground);
     /* Headings wrap rather than hold the column open: a wide report fits its card instead of scrolling sideways */
     white-space: normal;
@@ -344,27 +579,158 @@ select:focus {
   }
   .data-table tbody tr {
     border-bottom: 1px solid hsl(40 8% 92%);
-    transition: background .1s;
+    transition: background 0.1s;
   }
-  .data-table tbody tr:last-child { border-bottom: none; }
-  .data-table tbody tr:hover { background: hsl(48 60% 97%); }
-  .data-table tbody td { padding: 12px; }
+  .data-table tbody tr:last-child {
+    border-bottom: none;
+  }
+  .data-table tbody tr:hover {
+    background: hsl(48 60% 97%);
+  }
+  .data-table tbody td {
+    padding: 12px;
+  }
   /* A salesperson who has stopped calling during office hours: the whole row goes red */
-  .data-table tbody tr.row-idle { background: hsl(0 84% 57% / .12); box-shadow: inset 3px 0 0 var(--clr-red); }
-  .data-table tbody tr.row-idle:hover { background: hsl(0 84% 57% / .18); }
-  .data-table tfoot tr { border-top: 2px solid var(--border); }
-  .data-table tfoot td { padding: 12px; }
+  .data-table tbody tr.row-idle {
+    background: color-mix(in oklab, var(--clr-red) 12%, transparent);
+    box-shadow: inset 3px 0 0 var(--clr-red);
+  }
+  .data-table tbody tr.row-idle:hover {
+    background: color-mix(in oklab, var(--clr-red) 18%, transparent);
+  }
+  /*
+   * A closed lead on the Call log, the lead tables and Client leisure: a wash of its colour and a bar down
+   * the left edge, the same highlight the idle row uses. Light on purpose — only won and lost carry a
+   * colour there, so each one has to read as a mark on an ordinary row, not as a block of solid colour.
+   */
+  .data-table tbody tr.row-won {
+    background: color-mix(in oklab, var(--clr-green) 12%, transparent);
+    box-shadow: inset 3px 0 0 var(--clr-green);
+  }
+  .data-table tbody tr.row-won:hover {
+    background: color-mix(in oklab, var(--clr-green) 18%, transparent);
+  }
+  .data-table tbody tr.row-lost {
+    background: color-mix(in oklab, var(--clr-red) 12%, transparent);
+    box-shadow: inset 3px 0 0 var(--clr-red);
+  }
+  .data-table tbody tr.row-lost:hover {
+    background: color-mix(in oklab, var(--clr-red) 18%, transparent);
+  }
+  /* A lead's status colours its whole row — see "Status rows" below, outside this layer */
+  .data-table tfoot tr {
+    border-top: 2px solid var(--border);
+  }
+  .data-table tfoot td {
+    padding: 12px;
+  }
+}
+
+/*
+ * ─── Status rows ───────────────────────────────────────────────────────────
+ * A lead's stage, or a call's outcome, colours its whole row: orange = not reachable, yellow = connected,
+ * green = converted (won), red = lost. Solid fills, not tints — a low-alpha wash over the table's cream
+ * stripes came out near-white and said nothing. Each row names its own ink, white only where black cannot
+ * hold its contrast, and hover darkens the fill rather than lightening it, so the row under the cursor is
+ * never the palest one on screen. Unlayered on purpose: the cells carry their own Tailwind colour
+ * utilities, and inside a layer every one of them would win over the row.
+ */
+.data-table tbody tr:is(.row-orange, .row-yellow, .row-green, .row-red) {
+  background: var(--row-fill);
+  color: var(--row-ink);
+  border-bottom-color: color-mix(in oklab, var(--row-fill) 76%, black);
+  box-shadow: inset 4px 0 0 color-mix(in oklab, var(--row-fill) 62%, black);
+}
+.data-table tbody tr.row-orange {
+  --row-fill: var(--row-orange);
+  --row-ink: #1b1203;
+}
+.data-table tbody tr.row-yellow {
+  --row-fill: var(--row-yellow);
+  --row-ink: #1b1b02;
+}
+.data-table tbody tr.row-green {
+  --row-fill: var(--row-green);
+  --row-ink: #0b1703;
+}
+.data-table tbody tr.row-red {
+  --row-fill: var(--row-red);
+  --row-ink: #fff;
+}
+.data-table tbody tr:is(.row-orange, .row-yellow, .row-green, .row-red):hover {
+  background: color-mix(in oklab, var(--row-fill) 85%, black);
+}
+
+/*
+ * Every colour a cell sets for itself was picked against white — the olive text-primary-text on a lead's
+ * name in the call log disappeared into the red rows — so on a status row they all give way to its ink.
+ * Named one by one rather than with a wildcard: a control with a fill of its own (an outline button, a
+ * badge) has to keep its own colour, and those set it through a background, not a text utility.
+ */
+.data-table tbody tr:is(.row-orange, .row-yellow, .row-green, .row-red) :is(
+    .text-primary-text,
+    .text-foreground,
+    .text-red-500, .text-red-600, .text-red-700,
+    .text-emerald-600, .text-emerald-700,
+    .text-amber-500, .text-amber-600, .text-amber-700, .text-amber-900,
+    .text-sky-400, .text-sky-700
+  ) {
+  color: var(--row-ink);
+}
+
+/* The grey sub-lines inside a cell ("1 connected", an order value) take the same ink, stepped back */
+.data-table tbody tr:is(.row-orange, .row-yellow, .row-green, .row-red) .text-muted-foreground {
+  color: color-mix(in oklab, var(--row-ink) 74%, transparent);
+}
+
+/*
+ * A control that brings its own light surface into the row — an outline button, the recording chip — has to
+ * read against that surface, not against the fill behind it, so it drops back to the page's own ink. Only
+ * the neutral backgrounds are listed: bg-primary and its kin pair with a text-*-foreground of their own.
+ */
+.data-table tbody tr:is(.row-orange, .row-yellow, .row-green, .row-red) :is(.bg-card, .bg-background, .bg-muted, .bg-popover, .bg-white),
+.data-table tbody tr:is(.row-orange, .row-yellow, .row-green, .row-red) :is(.bg-card, .bg-background, .bg-muted, .bg-popover, .bg-white) * {
+  color: var(--foreground);
+}
+
+/*
+ * A badge keeps the same solid colour it has anywhere else, so the pill on a row and the pill in a filter
+ * read as the same thing. On a fill of its own colour only its edge separates the two, so there it gains
+ * a white ring. The neutral badges are translucent by design and would let the fill through, so on a row
+ * they take an opaque backing instead.
+ */
+.data-table tbody tr:is(.row-orange, .row-yellow, .row-green, .row-red) .badge {
+  box-shadow:
+    inset 0 0 0 1px var(--badge-edge, hsl(0 0% 0% / 0.16)),
+    0 0 0 1.5px hsl(0 0% 100% / 0.82);
+}
+.data-table tbody tr:is(.row-orange, .row-yellow, .row-green, .row-red) .badge:not(.badge-orange, .badge-yellow, .badge-green, .badge-red) {
+  background: hsl(0 0% 100% / 0.93);
 }
 
 /* A wide report tightens up as the window narrows, so it keeps fitting instead of scrolling sideways */
 @media (max-width: 1400px) {
-  .data-table thead th { padding: 9px 8px; letter-spacing: .04em; }
-  .data-table tbody td, .data-table tfoot td { padding: 10px 8px; }
+  .data-table thead th {
+    padding: 9px 8px;
+    letter-spacing: 0.04em;
+  }
+  .data-table tbody td,
+  .data-table tfoot td {
+    padding: 10px 8px;
+  }
 }
 @media (max-width: 1150px) {
-  .data-table { font-size: .8125rem; }
-  .data-table thead th { padding: 8px 6px; letter-spacing: .02em; }
-  .data-table tbody td, .data-table tfoot td { padding: 9px 6px; }
+  .data-table {
+    font-size: 0.8125rem;
+  }
+  .data-table thead th {
+    padding: 8px 6px;
+    letter-spacing: 0.02em;
+  }
+  .data-table tbody td,
+  .data-table tfoot td {
+    padding: 9px 6px;
+  }
 }
 
 /* ─── Stage funnel ─────────────────────────────────────────────────────── */
@@ -389,10 +755,13 @@ select:focus {
   text-align: center;
 }
 .empty-state-icon {
-  width: 52px; height: 52px;
+  width: 52px;
+  height: 52px;
   border-radius: 14px;
   background: var(--muted);
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 16px;
 }
 
@@ -403,11 +772,12 @@ select:focus {
   justify-content: space-between;
   padding: 10px 16px;
   border-radius: var(--radius-md);
-  background: hsl(48 97% 53% / .12);
-  border: 1px solid hsl(48 97% 45% / .45);
+  background: hsl(48 97% 53% / 0.12);
+  border: 1px solid hsl(48 97% 45% / 0.45);
 }
 .timer-dot {
-  width: 8px; height: 8px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--clr-blue);
   animation: pulse-dot 1.5s ease-in-out infinite;
@@ -438,39 +808,89 @@ select:focus {
   padding: 12px 14px;
   cursor: grab;
   box-shadow: var(--shadow-xs);
-  transition: box-shadow .18s, transform .18s;
+  transition:
+    box-shadow 0.18s,
+    transform 0.18s;
 }
 .kanban-card:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
-.kanban-card:active { cursor: grabbing; }
+.kanban-card:active {
+  cursor: grabbing;
+}
 
 /* ─── Section label ─────────────────────────────────────────────────────  */
 .section-label {
-  font-size: .6875rem;
+  font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .08em;
+  letter-spacing: 0.08em;
 }
 
 /* ─── Icon backgrounds (KPI card chips) ───────────────────────────────── */
-.icon-bg-blue   { background: hsl(48 97% 53% / .22); color: hsl(45 100% 24%); }
-.icon-bg-green  { background: hsl(142 71% 42% / .1); color: hsl(142 71% 32%); }
-.icon-bg-amber  { background: hsl(38  92% 48% / .1); color: hsl(38  92% 36%); }
-.icon-bg-purple { background: hsl(258 90% 62% / .1); color: hsl(258 90% 48%); }
-.icon-bg-sky    { background: var(--brand-black); color: var(--brand-yellow); }
-.icon-bg-red    { background: hsl(0   84% 57% / .1); color: hsl(0   84% 44%); }
+.icon-bg-blue {
+  background: hsl(48 97% 53% / 0.22);
+  color: hsl(45 100% 24%);
+}
+.icon-bg-green {
+  background: color-mix(in oklab, var(--clr-green) 10%, transparent);
+  color: var(--clr-green);
+}
+.icon-bg-amber {
+  background: hsl(38 92% 48% / 0.1);
+  color: hsl(38 92% 36%);
+}
+.icon-bg-purple {
+  background: hsl(258 90% 62% / 0.1);
+  color: hsl(258 90% 48%);
+}
+.icon-bg-sky {
+  background: var(--brand-black);
+  color: var(--brand-yellow);
+}
+.icon-bg-red {
+  background: color-mix(in oklab, var(--clr-red) 10%, transparent);
+  color: color-mix(in oklab, var(--clr-red) 88%, black);
+}
 
 /* ─── KPI card subtle colour tints ─────────────────────────────────────── */
-.kpi-card-blue   { background: linear-gradient(155deg, hsl(48 97% 53% / .12) 0%, transparent 65%) !important; }
-.kpi-card-purple { background: linear-gradient(155deg, hsl(258 90% 62% / .06) 0%, transparent 65%) !important; }
-.kpi-card-green  { background: linear-gradient(155deg, hsl(142 71% 42% / .06) 0%, transparent 65%) !important; }
-.kpi-card-amber  { background: linear-gradient(155deg, hsl(38  92% 48% / .06) 0%, transparent 65%) !important; }
+.kpi-card-blue {
+  background: linear-gradient(
+    155deg,
+    hsl(48 97% 53% / 0.12) 0%,
+    transparent 65%
+  ) !important;
+}
+.kpi-card-purple {
+  background: linear-gradient(
+    155deg,
+    hsl(258 90% 62% / 0.06) 0%,
+    transparent 65%
+  ) !important;
+}
+.kpi-card-green {
+  background: linear-gradient(
+    155deg,
+    color-mix(in oklab, var(--clr-green) 6%, transparent) 0%,
+    transparent 65%
+  ) !important;
+}
+.kpi-card-amber {
+  background: linear-gradient(
+    155deg,
+    hsl(38 92% 48% / 0.06) 0%,
+    transparent 65%
+  ) !important;
+}
 
 /* ─── Hover row (activity table) ───────────────────────────────────────── */
-.hover-row { transition: background .08s ease; }
-.hover-row:hover { background: hsl(48 60% 97.5%) !important; }
+.hover-row {
+  transition: background 0.08s ease;
+}
+.hover-row:hover {
+  background: hsl(48 60% 97.5%) !important;
+}
 
 /* ─── Notification badge dot ────────────────────────────────────────────── */
 .notif-badge {
@@ -484,7 +904,7 @@ select:focus {
   font-size: 9px;
   font-weight: 700;
   line-height: 1;
-  background: hsl(0 84% 57%);
+  background: var(--clr-red);
   color: #fff;
   letter-spacing: 0;
   margin-left: auto;
@@ -500,20 +920,45 @@ select:focus {
   flex-shrink: 0;
   background: var(--brand-yellow);
   color: var(--brand-black);
-  font-size: .75rem;
+  font-size: 0.75rem;
 }
-.avatar-sm  { width: 28px; height: 28px; font-size: .6875rem; }
-.avatar-md  { width: 36px; height: 36px; font-size: .75rem; }
-.avatar-lg  { width: 44px; height: 44px; font-size: .875rem; }
-.avatar-xl  { width: 52px; height: 52px; font-size: 1rem; }
+.avatar-sm {
+  width: 28px;
+  height: 28px;
+  font-size: 0.6875rem;
+}
+.avatar-md {
+  width: 36px;
+  height: 36px;
+  font-size: 0.75rem;
+}
+.avatar-lg {
+  width: 44px;
+  height: 44px;
+  font-size: 0.875rem;
+}
+.avatar-xl {
+  width: 52px;
+  height: 52px;
+  font-size: 1rem;
+}
 
 /* ─── Skeleton shimmer ──────────────────────────────────────────────────── */
 @keyframes shimmer {
-  from { background-position: -400px 0; }
-  to   { background-position:  400px 0; }
+  from {
+    background-position: -400px 0;
+  }
+  to {
+    background-position: 400px 0;
+  }
 }
 .skeleton {
-  background: linear-gradient(90deg, hsl(40 8% 90%) 25%, hsl(45 12% 96%) 50%, hsl(40 8% 90%) 75%);
+  background: linear-gradient(
+    90deg,
+    hsl(40 8% 90%) 25%,
+    hsl(45 12% 96%) 50%,
+    hsl(40 8% 90%) 75%
+  );
   background-size: 800px 100%;
   animation: shimmer 1.4s ease-in-out infinite;
   border-radius: 6px;
@@ -524,12 +969,14 @@ select:focus {
 .kanban-card,
 .sidebar-item {
   will-change: transform;
-  transform: translateZ(0);         /* promote to compositor layer */
+  transform: translateZ(0); /* promote to compositor layer */
   backface-visibility: hidden;
 }
 
 /* ─── View Transitions API (page navigation) ───────────────────────────── */
-@view-transition { navigation: auto; }
+@view-transition {
+  navigation: auto;
+}
 
 ::view-transition-old(root) {
   animation: 200ms ease both fade-out;
@@ -539,10 +986,16 @@ select:focus {
 }
 
 @keyframes fade-out {
-  to { opacity: 0; transform: translateY(-4px); }
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
 }
 @keyframes fade-in-scale {
-  from { opacity: 0; transform: translateY(6px); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }
 
 /* ─── Smooth page scrolling ─────────────────────────────────────────────── */
@@ -558,7 +1011,11 @@ html {
 }
 
 /* ─── Instant link cursor ───────────────────────────────────────────────── */
-a, button, [role="button"] { cursor: pointer; }
+a,
+button,
+[role="button"] {
+  cursor: pointer;
+}
 
 /* ─── Hover rows (tables) — GPU transition ──────────────────────────────── */
 .data-table tbody tr {
@@ -567,28 +1024,37 @@ a, button, [role="button"] { cursor: pointer; }
 
 /* ─── Tighter, faster dialog animation ─────────────────────────────────── */
 [data-state="open"][role="dialog"] {
-  animation: dialog-in 180ms cubic-bezier(.16,1,.3,1) both;
+  animation: dialog-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 [data-state="closed"][role="dialog"] {
   animation: dialog-out 150ms ease both;
 }
 @keyframes dialog-in {
-  from { opacity: 0; transform: scale(.97) translateY(4px); }
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(4px);
+  }
 }
 @keyframes dialog-out {
-  to   { opacity: 0; transform: scale(.97) translateY(4px); }
+  to {
+    opacity: 0;
+    transform: scale(0.97) translateY(4px);
+  }
 }
 
 /* ─── Active press feedback ─────────────────────────────────────────────── */
 button:not(:disabled):active,
 [role="button"]:not(:disabled):active {
-  transform: scale(.97);
+  transform: scale(0.97);
   transition: transform 80ms ease;
 }
 
 /* ─── Sidebar link transition speed bump ──────────────────────────────── */
 .sidebar-item {
-  transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    transform 120ms ease;
 }
 
 /* ─── Table row hover speed ─────────────────────────────────────────────── */
@@ -597,13 +1063,16 @@ button:not(:disabled):active,
 }
 
 /* ─── Badge + icon chip smooth appearance ───────────────────────────────── */
-.badge, .icon-chip {
+.badge,
+.icon-chip {
   transition: opacity 150ms ease;
 }
 
 /* ─── Remove animation for users who prefer reduced motion ─────────────── */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }

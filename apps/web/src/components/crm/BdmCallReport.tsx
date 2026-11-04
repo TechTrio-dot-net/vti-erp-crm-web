@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing } from "lucide-react";
 import { api } from "@/lib/api";
-import { LUNCH_HOUR, WORK_HOURS, callingStatus, fmtCallDuration, fmtDay, outcomeMeta, qs, stageMeta, workHourLabel } from "@/lib/crm";
+import { LUNCH_HOUR, WORK_HOURS, callingStatus, fmtCallDuration, fmtDay, outcomeBadgeWonLost, outcomeRowWonLost, qs, stageBadgeWonLost, stageMeta, workHourLabel } from "@/lib/crm";
 import { useCrmUi } from "@/store/crm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RecordingButton } from "@/components/crm/CallRecording";
@@ -58,7 +58,8 @@ function Tile({ label, value, sub, tone = "" }: { label: string; value: React.Re
 export function BdmCallReport({ target, onClose }: { target: BdmCallTarget | null; onClose: () => void }) {
   return (
     <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto p-0 gap-0">
+      {/* A full day of calls is a wide table: give it the whole screen so it never scrolls sideways */}
+      <DialogContent className="max-w-[min(90rem,calc(100vw-2rem))] max-h-[92vh] overflow-y-auto p-0 gap-0">
         {target && <Body key={`${target.userId}|${target.date}`} target={target} onClose={onClose} />}
       </DialogContent>
     </Dialog>
@@ -164,7 +165,7 @@ function Body({ target, onClose }: { target: BdmCallTarget; onClose: () => void 
                         <td className="w-1/3 min-w-32">
                           {total > 0 ? (
                             <div className="flex items-center gap-2">
-                              <div className="h-2.5 rounded-full bg-primary" style={{ width: `${Math.max(6, (total / busiest) * 100)}%` }} />
+                              <div className="h-2.5 rounded-full bg-[var(--clr-yellow)]" style={{ width: `${Math.max(6, (total / busiest) * 100)}%` }} />
                               <span className="text-xs text-muted-foreground tabular-nums">{total}</span>
                             </div>
                           ) : (
@@ -202,6 +203,8 @@ function Body({ target, onClose }: { target: BdmCallTarget; onClose: () => void 
             csvName={`calls-${target.name.toLowerCase().replace(/\s+/g, "-")}-${target.date}`}
             rows={shown}
             empty="No calls match this filter."
+            rowClassName={(c) => outcomeRowWonLost({ ...c, outcome: c.result })}
+            legend="wonLost"
             columns={[
               { key: "startedAt", label: "Time", render: (c) => <span className="whitespace-nowrap">{time(c.startedAt)}</span>, csv: (c) => time(c.startedAt) },
               {
@@ -222,20 +225,26 @@ function Body({ target, onClose }: { target: BdmCallTarget; onClose: () => void 
               },
               {
                 key: "phone", label: "Number",
-                render: (c) => <span className="whitespace-nowrap">{c.phone}{c.contactName && <span className="block text-xs text-muted-foreground">{c.contactName}</span>}</span>,
+                // Same as the call log: the number never wraps, the name under it clips rather than widening the column
+                render: (c) => (
+                  <span className="block max-w-[11rem]">
+                    <span className="block whitespace-nowrap">{c.phone}</span>
+                    {c.contactName && <span className="block truncate text-xs text-muted-foreground" title={c.contactName}>{c.contactName}</span>}
+                  </span>
+                ),
               },
               {
                 key: "leadName", label: "Lead",
                 render: (c) => c.leadId ? (
                   <button type="button" className="text-primary-text hover:underline text-left" onClick={() => openLead(c.leadId!, `${target.name}'s day`)}>
-                    {c.leadName} {c.leadStage && <span className={`badge ${stageMeta(c.leadStage).badge} ml-1`}>{stageMeta(c.leadStage).label}</span>}
+                    {c.leadName} {c.leadStage && <span className={`badge ${stageBadgeWonLost(c.leadStage)} ml-1`}>{stageMeta(c.leadStage).label}</span>}
                   </button>
                 ) : <span className="text-muted-foreground">Not a lead yet</span>,
                 csv: (c) => c.leadName ?? "",
               },
               {
                 key: "result", label: "What happened",
-                render: (c) => <span className={`badge ${c.result ? outcomeMeta(c.result).badge : "badge-gray"}`}>{resultLabel(c.result)}</span>,
+                render: (c) => <span className={`badge ${c.result ? outcomeBadgeWonLost(c.result) : "badge-gray"}`}>{resultLabel(c.result)}</span>,
                 csv: (c) => resultLabel(c.result),
               },
               { key: "note", label: "Note", render: (c) => c.note ? <span className="text-xs text-muted-foreground line-clamp-2">{c.note}</span> : "—" },

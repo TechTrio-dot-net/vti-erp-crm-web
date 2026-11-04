@@ -76,13 +76,31 @@ describe('Call report', () => {
       { hour: 16, made: 1, connected: 1, notAnswered: 0, incoming: 0, missed: 0, leadCalls: 0, coldCalls: 1, talkSec: 30 },
     ]);
     expect(body.calls).toHaveLength(3);
-    // Newest first: the cold call, then the lost lead, then the call whose after-call form said "not interested"
+    // Newest first: the cold call, then the lost lead nobody picked up, then the call whose after-call
+    // form said "not interested". The unanswered one has no result of its own - the lead was marked lost
+    // at some later point, which says nothing about a call that never connected.
     expect(body.calls.map((c: { kind: string; result: string | null }) => [c.kind, c.result])).toEqual([
       ['cold', null],
-      ['lead', 'LOST'],
+      ['lead', null],
       ['lead', 'NOT_INTERESTED'],
     ]);
     expect(body.calls[2]).toMatchObject({ leadName: 'Keen Co', leadStage: 'PROPOSAL', note: 'Budget too small' });
+  });
+
+  it('reports every call, and lets only a connected one take the stage of its lead as the result', async () => {
+    const [lost] = await db.insert(leads).values({ companyName: 'Gone Co', phone: '+91 97777 00000', phoneNormalized: '9777700000', assignedTo: kavita.userId, stage: 'LOST' }).returning();
+    const onLost = { leadId: lost.id, phone: '+91 97777 00000', phoneNormalized: '9777700000' };
+    await call(kavita.userId, istAt(11), { ...onLost, durationSec: 45 });
+    await call(kavita.userId, istAt(12), { ...onLost, durationSec: 0 });
+    await call(kavita.userId, istAt(13), { ...onLost, direction: 'missed', durationSec: 0 });
+
+    const { body } = await as(admin).get(`/api/crm/reports/calls/bdm?user=${kavita.userId}`).expect(200);
+    // All three are in the log, newest first; only the one someone talked on reads as lost
+    expect(body.calls.map((c: { direction: string; result: string | null }) => [c.direction, c.result])).toEqual([
+      ['missed', null],
+      ['outgoing', null],
+      ['outgoing', 'LOST'],
+    ]);
   });
 
   it('lets a salesperson say why they stopped calling, until they call again', async () => {

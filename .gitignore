@@ -20,3 +20,6 @@ apps/web/.tmp/
 
 # BDM logins written by pnpm import:legacy-crm
 legacy-bdm-logins*.csv
+
+# Spreadsheet exports of customer and lead data (not for the repo)
+/*.xlsx

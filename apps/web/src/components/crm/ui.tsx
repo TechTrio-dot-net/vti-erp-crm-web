@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Download, WifiOff } from "lucide-react";
 import { api } from "@/lib/api";
-import { addDays, today, type Bdm, isCoordination, isBdm, isCrmAdmin } from "@/lib/crm";
+import { addDays, today, type Bdm, isCoordination, isBdm, isCrmAdmin, OUTCOME_LEGEND, STAGE_LEGEND, WON_LOST_LEGEND } from "@/lib/crm";
 import { useAuthStore } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -99,16 +99,31 @@ export function FilterBar({ children }: { children: React.ReactNode }) {
   return <div className="card p-4 flex flex-wrap items-center gap-3">{children}</div>;
 }
 
-export function StatCard({ label, value, sub, tone = "blue", icon: Icon }: { label: string; value: React.ReactNode; sub?: React.ReactNode; tone?: "blue" | "green" | "amber" | "red" | "sky" | "purple"; icon?: React.ComponentType<{ className?: string }> }) {
-  return (
-    <div className={`card animate-fade-up kpi-${tone} p-5`}>
+export function StatCard({ label, value, sub, tone = "blue", icon: Icon, onClick, active = false }: {
+  label: string; value: React.ReactNode; sub?: React.ReactNode;
+  tone?: "blue" | "green" | "amber" | "red" | "sky" | "purple";
+  icon?: React.ComponentType<{ className?: string }>;
+  /** Makes the whole card a button — a tile that narrows the table below it to what it counts */
+  onClick?: () => void;
+  /** That filter is the one in force, so the card is ringed to show where the table's rows come from */
+  active?: boolean;
+}) {
+  const body = (
+    <>
       <div className="flex items-start justify-between mb-3">
         <p className="text-[13px] font-medium text-muted-foreground">{label}</p>
         {Icon && <div className={`icon-chip size-9 icon-chip-${tone}`}><Icon className="size-4" /></div>}
       </div>
       <div className="text-3xl font-bold tabular-nums">{value}</div>
       {sub && <p className="text-xs text-muted-foreground mt-1">{sub}</p>}
-    </div>
+    </>
+  );
+  const cls = `card animate-fade-up kpi-${tone} p-5 ${active ? "ring-2 ring-ring" : ""}`;
+  if (!onClick) return <div className={cls}>{body}</div>;
+  return (
+    <button type="button" onClick={onClick} aria-pressed={active} className={`${cls} w-full text-left transition hover:shadow-md`}>
+      {body}
+    </button>
   );
 }
 
@@ -136,6 +151,8 @@ export type Column<T> = {
   render?: (row: T) => React.ReactNode;
   /** plain value for CSV export (defaults to row[key]) */
   csv?: (row: T) => unknown;
+  /** Kept out of the table but still exported, so trimming the screen never thins the CSV */
+  csvOnly?: boolean;
   className?: string;
   align?: "right";
 };
@@ -151,6 +168,7 @@ export function DataTable<T extends Record<string, unknown>>({
   rowClassName,
   footer,
   actions,
+  legend,
 }: {
   title?: string;
   rows: T[];
@@ -162,7 +180,10 @@ export function DataTable<T extends Record<string, unknown>>({
   rowClassName?: (row: T) => string | undefined;
   footer?: React.ReactNode;
   actions?: React.ReactNode;
+  /** Shows the key to the row colours above the first row; say which reading of them the rows use */
+  legend?: "stage" | "outcome" | "wonLost";
 }) {
+  const onScreen = columns.filter((c) => !c.csvOnly);
   const exportCsv = async () => {
     const { downloadCsv } = await import("@/lib/crm");
     downloadCsv(
@@ -185,18 +206,19 @@ export function DataTable<T extends Record<string, unknown>>({
           </div>
         </div>
       )}
+      {legend && rows.length > 0 && <StatusLegend of={legend} />}
       {rows.length === 0 ? (
         <div className="py-12 text-center text-sm text-muted-foreground">{empty}</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="data-table">
             <thead>
-              <tr>{columns.map((c) => <th key={c.key} className={c.align === "right" ? "text-right" : undefined}>{c.label}</th>)}</tr>
+              <tr>{onScreen.map((c) => <th key={c.key} className={c.align === "right" ? "text-right" : undefined}>{c.label}</th>)}</tr>
             </thead>
             <tbody>
               {rows.map((row, i) => (
                 <tr key={(row.id as string) ?? i} onClick={onRowClick ? () => onRowClick(row) : undefined} className={`${onRowClick ? "cursor-pointer" : ""} ${rowClassName?.(row) ?? ""}`.trim() || undefined}>
-                  {columns.map((c) => (
+                  {onScreen.map((c) => (
                     <td key={c.key} className={`${c.className ?? ""} ${c.align === "right" ? "text-right tabular-nums" : ""}`}>
                       {c.render ? c.render(row) : ((row[c.key] as React.ReactNode) ?? "—")}
                     </td>
@@ -208,6 +230,22 @@ export function DataTable<T extends Record<string, unknown>>({
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * The key to the row colours. A table that tints its rows is a wall of orange, yellow, green and red with
+ * nothing saying which is which, so it carries this strip above the first row. The badges are the ones the
+ * rows themselves use, at their own colour rather than the ringed version a tinted row shows.
+ */
+export function StatusLegend({ of = "stage" }: { of?: "stage" | "outcome" | "wonLost" }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 px-5 py-2.5 border-b border-border/50">
+      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Row colour</span>
+      {(of === "wonLost" ? WON_LOST_LEGEND : of === "outcome" ? OUTCOME_LEGEND : STAGE_LEGEND).map((l) => (
+        <span key={l.label} className={`badge ${l.badge}`}>{l.label}</span>
+      ))}
     </div>
   );
 }

@@ -110,7 +110,7 @@ export function ImportsTable({ fixedStatus }: { fixedStatus?: string }) {
       )}
 
       <Dialog open={!!fixing} onOpenChange={(o) => !o && setFixing(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-[min(32rem,calc(100vw-2rem))]">
           <DialogHeader><DialogTitle>Fix and import row</DialogTitle></DialogHeader>
           {fixing && (
             <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); retry.mutate({ id: fixing.id, overrides: fix }); }}>

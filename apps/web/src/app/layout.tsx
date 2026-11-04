@@ -25,8 +25,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // Extensions (Grammarly, password managers) write their own attributes onto <html> and <body>
+    // before React hydrates, which otherwise reads as a server/client mismatch. The flag only covers
+    // the element it sits on, so <body> needs its own — it is the one extensions reach for.
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Providers>{children}</Providers>
         <Toaster position="top-right" richColors closeButton />
       </body>

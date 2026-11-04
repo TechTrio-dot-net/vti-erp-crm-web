@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarDays, Clock, PhoneCall, PhoneIncoming, PhoneMissed, PhoneOutgoing, Snowflake, UserPlus, Users } from "lucide-react";
 import { api } from "@/lib/api";
-import { WORK, WORK_HOURS, callingStatus, fmtCallDuration, fmtDateTime, fmtDay, isBdm, qs, rankOf, stageMeta, workHourLabel } from "@/lib/crm";
+import { WORK, WORK_HOURS, callingStatus, fmtCallDuration, fmtDateTime, fmtDay, isBdm, outcomeRowWonLost, qs, rankOf, stageBadgeWonLost, stageMeta, workHourLabel } from "@/lib/crm";
 import { useAuthStore } from "@/store/auth";
 import { useCrmUi } from "@/store/crm";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ import { BdmSelect, DataTable, DateRangeFilter, ErrorState, FilterBar, LoadingBl
 type Call = {
   id: string; source: string; direction: string; status: string | null; phone: string; contactName: string | null; startedAt: string;
   durationSec: number; recordingUrl: string | null; recordingStatus: string | null; userId: string | null; userName: string | null; leadId: string | null; leadName: string | null; leadStage: string | null;
+  /** What the BDM wrote on the after-call form; null until someone does, and then the stage stands in */
+  outcome: string | null;
 };
 type DayRow = {
   userId: string; name: string; date: string; total: number; outgoing: number; incoming: number; missed: number; connected: number;
@@ -176,7 +178,7 @@ export default function CallLogPage() {
                     <div key={h} className="flex-1 flex flex-col items-center gap-1" title={`${workHourLabel(h)} — ${x?.calls ?? 0} calls, ${x?.connected ?? 0} connected`}>
                       <span className="text-[10px] text-muted-foreground tabular-nums">{x?.calls ?? 0}</span>
                       <div className="w-full flex flex-col justify-end h-20 bg-muted/40 rounded-sm overflow-hidden">
-                        <div className={`w-full ${x?.calls ? "bg-primary" : ""}`} style={{ height: `${((x?.calls ?? 0) / maxHour) * 100}%` }} />
+                        <div className={`w-full ${x?.calls ? "bg-[var(--clr-yellow)]" : ""}`} style={{ height: `${((x?.calls ?? 0) / maxHour) * 100}%` }} />
                       </div>
                       <span className="text-[10px] text-muted-foreground">{workHourLabel(h).split(" – ")[0]}</span>
                     </div>
@@ -212,6 +214,8 @@ export default function CallLogPage() {
             title={`${log.data.total} calls`}
             csvName="call-log"
             rows={log.data.rows}
+            rowClassName={(c) => outcomeRowWonLost(c)}
+            legend="wonLost"
             empty="No calls in this period. Calls appear here once the phone app syncs or the calling service is connected."
             columns={[
               { key: "startedAt", label: "When", render: (c) => <span className="whitespace-nowrap">{fmtDateTime(c.startedAt)}</span> },
@@ -224,12 +228,19 @@ export default function CallLogPage() {
               },
               { key: "durationSec", label: "Duration", align: "right", render: (c) => (c.durationSec > 0 ? fmtCallDuration(c.durationSec) : <span className="text-muted-foreground">{c.status && !["completed"].includes(c.status) ? c.status.replace("-", " ") : c.direction === "outgoing" ? "no answer" : "—"}</span>), csv: (c) => c.durationSec },
               ...(!isBdm(role) ? [{ key: "userName", label: "BDM" }] : []),
-              { key: "phone", label: "Number", render: (c) => <span className="whitespace-nowrap">{c.phone}{c.contactName && <span className="block text-xs text-muted-foreground">{c.contactName}</span>}</span> },
+              // The number itself never wraps; the contact name under it is clipped rather than allowed to
+              // hold the column open, since one long company name was widening the table for all 100 rows
+              { key: "phone", label: "Number", render: (c) => (
+                <span className="block max-w-[11rem]">
+                  <span className="block whitespace-nowrap">{c.phone}</span>
+                  {c.contactName && <span className="block truncate text-xs text-muted-foreground" title={c.contactName}>{c.contactName}</span>}
+                </span>
+              ) },
               {
                 key: "leadName", label: "Lead",
                 render: (c) => c.leadId ? (
                   <button type="button" className="text-primary-text hover:underline text-left" onClick={() => openLead(c.leadId!)}>
-                    {c.leadName} {c.leadStage && <span className={`badge ${stageMeta(c.leadStage).badge} ml-1`}>{stageMeta(c.leadStage).label}</span>}
+                    {c.leadName} {c.leadStage && <span className={`badge ${stageBadgeWonLost(c.leadStage)} ml-1`}>{stageMeta(c.leadStage).label}</span>}
                   </button>
                 ) : c.leadName ? <span className="text-muted-foreground">{c.leadName}</span> : (
                   <Button size="sm" variant="outline" className="h-7" disabled={createLead.isPending} onClick={() => createLead.mutate(c.id)}><UserPlus className="size-3.5" />Make lead</Button>

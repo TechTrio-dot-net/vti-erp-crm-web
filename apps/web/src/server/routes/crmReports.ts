@@ -15,6 +15,7 @@ import {
   todayLocal,
 } from '../lib/crm';
 import { HttpError, optionalId, sendError } from '../lib/http';
+import { isConnected } from '../services/calls';
 
 const router = Router();
 router.use(authMiddleware, requireCrm);
@@ -541,7 +542,13 @@ router.get('/calls/bdm', async (req: AuthRequest, res) => {
       hourly,
       reasons,
       // A call on a number the CRM doesn't know yet is a cold call; the rest are calls on leads
-      calls: calls.map((c) => ({ ...c, kind: c.leadId ? 'lead' : 'cold', result: c.outcome ?? RESULT_BY_STAGE[c.leadStage ?? ''] ?? null })),
+      // Only a call that connected takes the lead's stage as its result. A missed or unanswered call has no
+      // result of its own, and borrowing the stage made every call on a won lead report back as "Won".
+      calls: calls.map((c) => ({
+        ...c,
+        kind: c.leadId ? 'lead' : 'cold',
+        result: c.outcome ?? (isConnected(c) ? RESULT_BY_STAGE[c.leadStage ?? ''] ?? null : null),
+      })),
     });
   } catch (err) {
     sendError(res, err, 'Failed to load this salesperson\'s calls');
@@ -751,6 +758,190 @@ router.get('/whatsapp-log', requireCrmAdmin, async (req: AuthRequest, res) => {
     res.json({ range: { from, to }, rows: data });
   } catch (err) {
     sendError(res, err, 'Failed to load WhatsApp log');
+  }
+});
+
+
+// ─── Client Leisure (one row per lead: when it came, every call, every order) ────────────────────────────────────
+
+/**
+ * What counts as an order. `confirmed` is a quotation the client accepted or has paid something against;
+ * `all` is every quotation that reached the client, for a wider view of what was offered. Drafts never count
+ * either way — nothing has been sent yet.
+ */
+const ORDER_FILTERS = {
+  confirmed: sql.raw(`(q.status = 'accepted' OR q.amount_paid::numeric > 0)`),
+  all: sql.raw(`q.status IN ('sent', 'accepted')`),
+};
+type OrderScope = keyof typeof ORDER_FILTERS;
+const orderScope = (value: unknown): OrderScope => (value === 'all' ? 'all' : 'confirmed');
+
+/** How many rows the list sends. Beyond this the table says so, and the tiles still count the whole period. */
+const LIST_LIMIT = 3000;
+
+/** Last 10 digits of a quotation's client phone, to match a lead whose quotation was raised separately */
+const QUOTE_PHONE = sql.raw(`right(regexp_replace(coalesce(q.client_phone, ''), '\\D', '', 'g'), 10)`);
+
+/**
+ * Quotations that belong to a lead: by the link the quotation carries and — when it carries none — by the
+ * client's phone number. Many quotations are written straight from the quotation screen rather than from the
+ * lead, so without the phone fallback a client's repeat orders would never show against their lead.
+ */
+function orderSource(scope: OrderScope): SQL {
+  return sql`
+    SELECT q.id, q.lead_id, q.quotation_number, q.status, q.subject, q.created_at, q.valid_until,
+      q.grand_total::float8 AS total, q.amount_paid::float8 AS paid, q.payment_completed_at, q.created_by,
+      ${QUOTE_PHONE} AS phone10
+    FROM quotations q
+    WHERE q.deleted_at IS NULL AND ${ORDER_FILTERS[scope]}`;
+}
+
+/**
+ * One row per lead with the whole relationship on it: the day the enquiry came in, the first call, how many
+ * calls since, how many orders and what they were worth. A lead that was lost keeps its order count (0 for a
+ * client who never bought) and carries the reason it was lost. Every row opens its own timeline.
+ */
+router.get('/client-leisure', requireCrmAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { from, to } = dateRange(req.query, 90);
+    const scope = orderScope(req.query.orders);
+    const stage = typeof req.query.stage === 'string' ? req.query.stage : '';
+    const stageFilter =
+      stage === 'won' ? sql`AND l.stage = 'WON'`
+      : stage === 'lost' ? sql`AND l.stage = 'LOST'`
+      : stage === 'open' ? sql`AND ${OPEN}`
+      : sql``;
+
+    // Which tile the admin pressed. It narrows the rows but never the tiles, so the counts stay put.
+    const has = req.query.has === 'ordered' ? sql`WHERE r.orders > 0` : req.query.has === 'repeat' ? sql`WHERE r.orders > 1` : sql``;
+
+    const body = sql`
+      WITH ord AS (${orderSource(scope)}),
+      ord_lead AS (
+        SELECT lead_id AS k, count(*)::int AS orders, min(created_at) AS first_at, max(created_at) AS last_at,
+          coalesce(sum(total), 0)::float8 AS value, coalesce(sum(paid), 0)::float8 AS paid
+        FROM ord WHERE lead_id IS NOT NULL GROUP BY 1),
+      ord_phone AS (
+        SELECT phone10 AS k, count(*)::int AS orders, min(created_at) AS first_at, max(created_at) AS last_at,
+          coalesce(sum(total), 0)::float8 AS value, coalesce(sum(paid), 0)::float8 AS paid
+        FROM ord WHERE lead_id IS NULL AND phone10 <> '' GROUP BY 1),
+      calls AS (
+        SELECT lead_id AS k, count(*)::int AS made, count(*) FILTER (WHERE duration_sec > 0)::int AS connected,
+          min(started_at) AS first_at, max(started_at) AS last_at, coalesce(sum(duration_sec), 0)::int AS talk_sec
+        FROM call_logs WHERE lead_id IS NOT NULL GROUP BY 1),
+      -- A call written up on the website has no phone record of its own, so those are counted on their own
+      written AS (
+        SELECT lead_id AS k, count(*) FILTER (WHERE call_log_id IS NULL)::int AS web_only,
+          min(created_at) AS first_at, max(created_at) AS last_at
+        FROM lead_followups GROUP BY 1)
+      SELECT l.id, coalesce(nullif(btrim(l.contact_name), ''), l.company_name) AS name, l.company_name AS "companyName",
+        l.phone, l.email, l.city, l.source, l.campaign, coalesce(s.name, l.service) AS service,
+        l.stage, l.status_label AS "statusLabel", l.lost_reason AS "lostReason",
+        l.created_at AS "cameAt", l.assigned_at AS "assignedAt", l.closed_at AS "closedAt",
+        l.estimated_value AS "estimatedValue", u.name AS "assignedName",
+        least(c.first_at, w.first_at, l.first_contact_at) AS "firstCallAt",
+        greatest(c.last_at, w.last_at, l.last_contact_at) AS "lastCallAt",
+        (coalesce(c.made, 0) + coalesce(w.web_only, 0))::int AS calls,
+        coalesce(c.connected, 0)::int AS "callsConnected",
+        coalesce(c.talk_sec, 0)::int AS "talkSec",
+        (coalesce(ol.orders, 0) + coalesce(op.orders, 0))::int AS orders,
+        least(ol.first_at, op.first_at) AS "firstOrderAt",
+        greatest(ol.last_at, op.last_at) AS "lastOrderAt",
+        (coalesce(ol.value, 0) + coalesce(op.value, 0))::float8 AS "orderValue",
+        (coalesce(ol.paid, 0) + coalesce(op.paid, 0))::float8 AS "orderPaid"
+      FROM leads l
+      LEFT JOIN users u ON u.id = l.assigned_to
+      LEFT JOIN services s ON s.id = l.service_id
+      LEFT JOIN calls c ON c.k = l.id
+      LEFT JOIN written w ON w.k = l.id
+      LEFT JOIN ord_lead ol ON ol.k = l.id
+      LEFT JOIN ord_phone op ON op.k = l.phone_normalized
+      WHERE l.duplicate_of_id IS NULL AND ${day('l.created_at')} BETWEEN ${from} AND ${to}
+        ${stageFilter} ${bdmFilter(req, 'l.assigned_to')}`;
+
+    // The tiles are counted over the whole period, not over the page of rows below them: at this volume the
+    // list is capped, and a tile that counted only what was sent would quietly disagree with itself.
+    //
+    // The cap takes the newest leads by the day they came in, and a won client is almost always an older
+    // one — it took calls and weeks to close — so a busy period pushed every win off the end of the list.
+    // Wins are the rows this report exists for, so they come through whatever their rank, and whether or
+    // not they ever carried an order: a client can be won on a quotation raised somewhere else, or on none.
+    const [picked, [totals]] = await Promise.all([
+      rows<Record<string, unknown> & { rn: number }>(sql`
+        SELECT * FROM (
+          SELECT r.*, (row_number() OVER (ORDER BY r."cameAt" DESC))::int AS rn FROM (${body}) r ${has}
+        ) z
+        WHERE z.rn <= ${LIST_LIMIT} OR z.stage = 'WON'
+        ORDER BY z."cameAt" DESC`),
+      rows<{ leads: number; ordered: number; repeat: number; lost: number; calls: number; value: number; paid: number }>(sql`
+        SELECT count(*)::int AS leads,
+          count(*) FILTER (WHERE r.orders > 0)::int AS ordered,
+          count(*) FILTER (WHERE r.orders > 1)::int AS repeat,
+          count(*) FILTER (WHERE r.stage = 'LOST')::int AS lost,
+          coalesce(sum(r.calls), 0)::int AS calls,
+          coalesce(sum(r."orderValue"), 0)::float8 AS value,
+          coalesce(sum(r."orderPaid"), 0)::float8 AS paid
+        FROM (${body}) r`),
+    ]);
+    // `rn` is the cap's own bookkeeping and means nothing to the client
+    const data = picked.map(({ rn: _rn, ...row }) => row);
+    res.json({ range: { from, to }, orders: scope, totals, rows: data, capped: picked.some((r) => r.rn >= LIST_LIMIT) });
+  } catch (err) {
+    sendError(res, err, 'Failed to load client leisure');
+  }
+});
+
+/**
+ * One client's whole history: every call in the order it happened — the phone's own record where there is one,
+ * the website write-up where there is not — and every order with the date it was raised and what was paid.
+ */
+router.get('/client-leisure/:id', requireCrmAdmin, async (req: AuthRequest, res) => {
+  try {
+    const id = optionalId(req.params.id, 'id');
+    if (!id) throw new HttpError(400, 'Which lead?');
+    const scope = orderScope(req.query.orders);
+
+    const [[lead], calls, orders] = await Promise.all([
+      rows(sql`
+        SELECT l.id, coalesce(nullif(btrim(l.contact_name), ''), l.company_name) AS name, l.company_name AS "companyName",
+          l.contact_name AS "contactName", l.phone, l.email, l.city, l.source, l.campaign, l.ad_name AS "adName",
+          l.form_name AS "formName", l.platform, coalesce(s.name, l.service) AS service, l.business_type AS "businessType",
+          l.stage, l.status_label AS "statusLabel", l.lost_reason AS "lostReason", l.notes,
+          l.created_at AS "cameAt", l.assigned_at AS "assignedAt", l.first_contact_at AS "firstContactAt",
+          l.last_contact_at AS "lastContactAt", l.next_followup_at AS "nextFollowupAt", l.closed_at AS "closedAt",
+          l.sample_shared_at AS "sampleSharedAt", l.estimated_value AS "estimatedValue", u.name AS "assignedName"
+        FROM leads l LEFT JOIN users u ON u.id = l.assigned_to LEFT JOIN services s ON s.id = l.service_id
+        WHERE l.id = ${id}`),
+      rows(sql`
+        SELECT 'call' AS kind, cl.id, cl.started_at AS "at", cl.direction, cl.duration_sec AS "durationSec",
+          cl.status, cl.source, u.name AS "userName", f.outcome, f.note, f.status_label AS "statusLabel",
+          f.call_activity AS "callActivity", f.reason, cl.recording_url AS "recordingUrl", cr.status AS "recordingStatus"
+        FROM call_logs cl
+        LEFT JOIN users u ON u.id = cl.user_id
+        LEFT JOIN lead_followups f ON f.call_log_id = cl.id
+        LEFT JOIN call_recordings cr ON cr.call_log_id = cl.id
+        WHERE cl.lead_id = ${id}
+        UNION ALL
+        SELECT 'followup' AS kind, f.id, f.created_at AS "at", NULL AS direction, f.call_duration_sec AS "durationSec",
+          NULL AS status, f.source, u.name AS "userName", f.outcome, f.note, f.status_label AS "statusLabel",
+          f.call_activity AS "callActivity", f.reason, NULL AS "recordingUrl", NULL AS "recordingStatus"
+        FROM lead_followups f LEFT JOIN users u ON u.id = f.user_id
+        WHERE f.lead_id = ${id} AND f.call_log_id IS NULL
+        ORDER BY "at" LIMIT 500`),
+      rows(sql`
+        WITH ord AS (${orderSource(scope)})
+        SELECT o.id, o.quotation_number AS "quotationNumber", o.status, o.subject, o.created_at AS "at",
+          o.valid_until AS "validUntil", o.total, o.paid, o.payment_completed_at AS "paidAt", u.name AS "createdByName"
+        FROM ord o LEFT JOIN users u ON u.id = o.created_by
+        WHERE o.lead_id = ${id}
+          OR (o.lead_id IS NULL AND o.phone10 <> ''
+              AND o.phone10 = (SELECT l.phone_normalized FROM leads l WHERE l.id = ${id}))
+        ORDER BY o.created_at LIMIT 200`),
+    ]);
+    if (!lead) throw new HttpError(404, 'Lead not found');
+    res.json({ lead, calls, orders, ordersScope: scope });
+  } catch (err) {
+    sendError(res, err, 'Failed to load this client history');
   }
 });
 

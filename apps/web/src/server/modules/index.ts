@@ -29,6 +29,8 @@ import searchRoutes from '../routes/search';
 import reportRoutes from '../routes/reports';
 import crmRoutes from '../routes/crm';
 import crmReportRoutes from '../routes/crmReports';
+import crmRetargetingRoutes from '../routes/crmRetargeting';
+import crmReminderRoutes from '../routes/crmReminders';
 import legacyArchiveRoutes from '../routes/legacyArchive';
 import integrationRoutes from '../routes/integrations';
 import masterRoutes from '../routes/masters';
@@ -57,6 +59,8 @@ export function setupModules(app: Express) {
 
   // Sales CRM (BDM logins, rotation, follow-ups, reports) and lead intake integrations
   app.use('/api/crm/reports', crmReportRoutes);
+  app.use('/api/crm/retargeting', crmRetargetingRoutes);
+  app.use('/api/crm/reminders', crmReminderRoutes);
   app.use('/api/crm/archive', legacyArchiveRoutes);
   app.use('/api/crm', crmRoutes);
   app.use('/api/calls', callRoutes);

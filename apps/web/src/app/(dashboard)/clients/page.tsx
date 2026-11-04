@@ -319,7 +319,7 @@ export default function ClientsPage() {
       </Dialog>
 
       <Dialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-[min(24rem,calc(100vw-2rem))]">
           <DialogHeader><DialogTitle>Delete client</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground pt-1">
             Delete <strong className="text-foreground">{deleting?.companyName}</strong>?

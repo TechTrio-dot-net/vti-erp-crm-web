@@ -104,7 +104,7 @@ function RecordingDialog({ callId, onClose }: { callId: string; onClose: () => v
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[min(42rem,calc(100vw-2rem))] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Call recording</DialogTitle>
         </DialogHeader>

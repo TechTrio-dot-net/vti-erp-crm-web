@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { OUTCOMES, fmtCallDuration, fmtDateTime, outcomeMeta, stageMeta } from "@/lib/crm";
+import { OUTCOMES, fmtCallDuration, fmtDateTime, outcomeMeta, outcomeRow, stageMeta } from "@/lib/crm";
 import { useCrmUi } from "@/store/crm";
 import { CallLink } from "@/components/crm/ClickToCall";
 import { BdmSelect, DataTable, DateRangeFilter, ErrorState, FilterBar, LoadingBlock, PageHeader, lastDays, selectCls } from "@/components/crm/ui";
@@ -38,6 +38,8 @@ export default function FollowupReportPage() {
           title="Follow-ups"
           csvName="followup-report"
           rows={data.rows}
+          rowClassName={(r) => outcomeRow(r.outcome, r.stage)}
+          legend="outcome"
           onRowClick={(r) => openLead(r.leadId)}
           columns={[
             { key: "createdAt", label: "When", render: (r) => <span className="whitespace-nowrap">{fmtDateTime(r.createdAt)}</span> },

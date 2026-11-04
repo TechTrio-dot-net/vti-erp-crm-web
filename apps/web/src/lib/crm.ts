@@ -9,29 +9,143 @@ export const COORDINATION_ROLES = ["VTI_COORDINATION", "COORDINATION"];
 export const isCoordination = (role?: string) => !!role && COORDINATION_ROLES.includes(role);
 export const isBdm = (role?: string) => role === "SALES";
 
+/**
+ * Four colours carry the whole pipeline at a glance: orange is nobody on the line yet, yellow is a live
+ * conversation to follow up, green is won and red is dead. Keep the badges here in step with LEADS_STAGES
+ * in app/(dashboard)/leads/page.tsx and STAGE_COLORS in app/(dashboard)/dashboard/page.tsx.
+ */
 export const STAGES = [
-  { key: "AWARENESS", label: "New", badge: "badge-gray" },
-  { key: "CONTACTED", label: "Contacted", badge: "badge-blue" },
-  { key: "PROPOSAL", label: "Interested", badge: "badge-purple" },
-  { key: "NEGOTIATION", label: "Negotiation", badge: "badge-amber" },
+  { key: "AWARENESS", label: "New", badge: "badge-orange" },
+  { key: "CONTACTED", label: "Contacted", badge: "badge-yellow" },
+  { key: "PROPOSAL", label: "Interested", badge: "badge-yellow" },
+  { key: "NEGOTIATION", label: "Negotiation", badge: "badge-yellow" },
   { key: "WON", label: "Won", badge: "badge-green" },
   { key: "LOST", label: "Lost", badge: "badge-red" },
 ] as const;
 
+/** The same four colours as STAGES: not connected, connected / follow-up, converted, lost */
 export const OUTCOMES = [
-  { key: "CONNECTED", label: "Connected", badge: "badge-blue" },
-  { key: "CALL_BACK", label: "Call back", badge: "badge-sky" },
-  { key: "NOT_REACHABLE", label: "Not reachable", badge: "badge-gray" },
-  { key: "INTERESTED", label: "Interested", badge: "badge-purple" },
-  { key: "NOT_INTERESTED", label: "Not interested", badge: "badge-amber" },
+  { key: "CONNECTED", label: "Connected", badge: "badge-yellow" },
+  { key: "CALL_BACK", label: "Call back", badge: "badge-yellow" },
+  { key: "NOT_REACHABLE", label: "Not reachable", badge: "badge-orange" },
+  { key: "INTERESTED", label: "Interested", badge: "badge-yellow" },
+  { key: "NOT_INTERESTED", label: "Not interested", badge: "badge-red" },
   { key: "CONVERTED", label: "Converted (won)", badge: "badge-green" },
   { key: "LOST", label: "Lost", badge: "badge-red" },
+] as const;
+
+/**
+ * Leads carry a free-text status from the old CRM ("Hot Closing", "Fresh", "Not Interested" …) as well as a
+ * stage. These are the groupings importLegacyCrm.ts uses to turn one into the other, so a panel showing the
+ * raw label lands on the same colour as one showing the stage.
+ */
+const STATUS_WON = ["closed", "booked", "token amount received", "won", "converted"];
+const STATUS_LOST = ["lost", "not interested", "invalid", "disqualified", "just curious", "event planner", "travel agent", "voucher inquiry", "investor (real estate)"];
+const STATUS_NEW = ["fresh", "new", "proposal call(fresh)", "not contacted"];
+
+export type StatusTone = "orange" | "yellow" | "green" | "red" | "gray";
+
+/** Anything we don't recognise is a lead somebody has already spoken to, so it follows up in yellow. */
+export function statusTone(label?: string | null): StatusTone {
+  const s = (label ?? "").trim().toLowerCase();
+  if (!s) return "gray";
+  if (STATUS_WON.includes(s)) return "green";
+  if (STATUS_LOST.includes(s)) return "red";
+  if (STATUS_NEW.includes(s)) return "orange";
+  return "yellow";
+}
+
+/** Badge class for a status label, in the four pipeline colours */
+export const statusBadge = (label?: string | null) => `badge-${statusTone(label)}`;
+
+/** The same four colours as a solid dot, for list markers */
+export const STATUS_DOT: Record<StatusTone, string> = {
+  orange: "bg-orange-400",
+  yellow: "bg-yellow-400",
+  green: "bg-emerald-500",
+  red: "bg-red-500",
+  gray: "bg-muted-foreground",
+};
+
+/**
+ * What the four row colours stand for, for the key above a table. Two readings of the same colours: a
+ * lead's stage on the lead tables, a call's outcome on the calling ones. Yellow covers three stages at
+ * once, so the stage key names the stretch rather than any one of them.
+ */
+export const STAGE_LEGEND = [
+  { label: "New", badge: "badge-orange" },
+  { label: "Contacted / interested", badge: "badge-yellow" },
+  { label: "Won", badge: "badge-green" },
+  { label: "Lost", badge: "badge-red" },
+] as const;
+
+export const OUTCOME_LEGEND = [
+  { label: "Not reachable", badge: "badge-orange" },
+  { label: "Connected", badge: "badge-yellow" },
+  { label: "Converted (won)", badge: "badge-green" },
+  { label: "Lost", badge: "badge-red" },
+] as const;
+
+/** The key to the two-colour reading below: only the closed leads carry a colour */
+export const WON_LOST_LEGEND = [
+  { label: "Won", badge: "badge-green" },
+  { label: "Lost", badge: "badge-red" },
 ] as const;
 
 export const LOST_REASONS = ["Price too high", "Not interested", "Chose competitor", "Not reachable", "Location / timing", "Duplicate / invalid", "Other"];
 
 export const stageMeta = (key?: string | null) => STAGES.find((s) => s.key === key) ?? { key: key ?? "", label: key ?? "—", badge: "badge-gray" };
 export const outcomeMeta = (key?: string | null) => OUTCOMES.find((o) => o.key === key) ?? { key: key ?? "", label: key ?? "—", badge: "badge-gray" };
+
+/**
+ * The same status as a whole-row tint for DataTable's rowClassName. Derived from the badge so a row and its
+ * badge can never drift apart; anything outside the four pipeline colours leaves the row alone.
+ */
+function rowClass(badge: string): string {
+  const tone = badge.replace("badge-", "");
+  return ["orange", "yellow", "green", "red"].includes(tone) ? `row-${tone}` : "";
+}
+
+/** Row tint for a lead's stage */
+export const stageRow = (stage?: string | null) => rowClass(stageMeta(stage).badge);
+
+/** Row tint for a call's outcome, falling back to the lead's stage when the call has no result yet */
+export const outcomeRow = (outcome?: string | null, stage?: string | null) =>
+  outcome ? rowClass(outcomeMeta(outcome).badge) : stage ? stageRow(stage) : "";
+
+/** Row tint for an old-CRM status label */
+export const statusRow = (label?: string | null) => rowClass(statusBadge(label));
+
+/**
+ * The two-colour reading of the same pipeline, for the Call log, the lead tables and Client leisure: green
+ * once a lead is won, red once it is lost, and no colour at all for every stage in between, so a scan of
+ * those lists picks out what is closed rather than tinting every row.
+ */
+const wonLostOnly = (badge: string) => (badge === "badge-green" || badge === "badge-red" ? badge : "badge-gray");
+
+/** Badge for a lead's stage, won and lost only */
+export const stageBadgeWonLost = (stage?: string | null) => wonLostOnly(stageMeta(stage).badge);
+
+/**
+ * These two do not use rowClass: a solid fill is far too loud when it marks the handful of closed rows in
+ * an otherwise plain table, so they take the light wash and left bar defined for .row-won / .row-lost.
+ */
+const wonLostRow = (badge: string) => (badge === "badge-green" ? "row-won" : badge === "badge-red" ? "row-lost" : "");
+
+/** Row highlight for a lead's stage, won and lost only */
+export const stageRowWonLost = (stage?: string | null) => wonLostRow(stageBadgeWonLost(stage));
+
+/** Badge for a call's outcome, won and lost only */
+export const outcomeBadgeWonLost = (outcome?: string | null) => wonLostOnly(outcomeMeta(outcome).badge);
+
+/**
+ * Row highlight for a call, won and lost only. An after-call form that closed the deal either way colours
+ * the row itself; anything else falls through to the Won/Lost badge beside the lead's name - a call nobody
+ * answered, and one marked "not reachable", included. So every call on a closed lead reads the same way
+ * down the column, instead of a handful of them being picked out.
+ */
+export const outcomeRowWonLost = (call: { outcome?: string | null; leadStage?: string | null }) =>
+  wonLostRow(outcomeBadgeWonLost(call.outcome)) || stageRowWonLost(call.leadStage);
 
 // ─── The calling day ────────────────────────────────────────────────────────────────────────────────────────────
 

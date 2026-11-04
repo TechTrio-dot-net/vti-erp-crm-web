@@ -1,26 +1,31 @@
 "use client";
 
-import { fmtDateTime, inr, isBdm, stageMeta, timeAgo, type CrmLead } from "@/lib/crm";
+import { fmtDateTime, inr, isBdm, stageBadgeWonLost, stageMeta, stageRowWonLost, timeAgo, type CrmLead } from "@/lib/crm";
 import { useAuthStore } from "@/store/auth";
 import { useCrmUi } from "@/store/crm";
 import { DataTable, type Column } from "@/components/crm/ui";
 import { CallLink } from "@/components/crm/ClickToCall";
 
-/** Lead list used by My Leads and Lead Filter */
-export function LeadTable({ rows, title, csvName, footer }: { rows: CrmLead[]; title?: string; csvName?: string; footer?: React.ReactNode }) {
+/** Lead list used by My Leads, Lead Filter and Retargeting (which adds a column of its own) */
+export function LeadTable({ rows, title, csvName, footer, extraColumns }: {
+  rows: CrmLead[];
+  title?: string;
+  csvName?: string;
+  footer?: React.ReactNode;
+  extraColumns?: Column<CrmLead & Record<string, unknown>>[];
+}) {
   const role = useAuthStore((s) => s.user?.role);
   const openLead = useCrmUi((s) => s.openLead);
   const columns: Column<CrmLead & Record<string, unknown>>[] = [
     {
       key: "name", label: "Lead",
-      csv: (l) => l.contactName || l.name,
       render: (l) => (
         <div className="min-w-0">
-          <p className="font-bold text-foreground flex items-center gap-2">
-            {l.contactName || l.name}
+          <p className="font-semibold text-foreground flex items-center gap-2">
+            {l.name}
             {l.pending && <span className="size-2 rounded-full bg-red-500" title="Not contacted" />}
           </p>
-          <p className="text-xs text-muted-foreground">{[l.contactName && l.contactName !== l.name && l.name, l.city, l.service].filter(Boolean).join(" · ") || "—"}</p>
+          <p className="text-xs text-muted-foreground">{[l.contactName !== l.name && l.contactName, l.city, l.service].filter(Boolean).join(" · ") || "—"}</p>
         </div>
       ),
     },
@@ -33,7 +38,7 @@ export function LeadTable({ rows, title, csvName, footer }: { rows: CrmLead[]; t
       key: "stage", label: "Stage / status",
       render: (l) => (
         <div className="flex flex-col items-start gap-1">
-          <span className={`badge ${stageMeta(l.stage).badge}`}>{stageMeta(l.stage).label}</span>
+          <span className={`badge ${stageBadgeWonLost(l.stage)}`}>{stageMeta(l.stage).label}</span>
           {l.statusLabel && l.statusLabel !== stageMeta(l.stage).label && <span className="text-xs text-muted-foreground">{l.statusLabel}</span>}
         </div>
       ),
@@ -51,6 +56,7 @@ export function LeadTable({ rows, title, csvName, footer }: { rows: CrmLead[]; t
     },
     { key: "estimatedValue", label: "Value", align: "right", render: (l) => (l.estimatedValue ? inr(l.estimatedValue) : "—") },
     { key: "createdAt", label: "Received", render: (l) => <span className="text-muted-foreground whitespace-nowrap">{timeAgo(l.createdAt)}</span>, csv: (l) => l.createdAt },
+    ...(extraColumns ?? []),
   ];
   return (
     <DataTable
@@ -59,6 +65,8 @@ export function LeadTable({ rows, title, csvName, footer }: { rows: CrmLead[]; t
       columns={columns}
       csvName={csvName}
       empty="No leads match"
+      rowClassName={(l) => stageRowWonLost(l.stage)}
+      legend="wonLost"
       onRowClick={(l) => openLead(l.id)}
       footer={footer}
     />

@@ -9,7 +9,7 @@ import { ArrowLeft, Phone, MessageCircle, Mail, MapPin, Megaphone, Clock, UserRo
 import { api } from "@/lib/api";
 import { useMe } from "@/lib/erp/me";
 import {
-  LOST_REASONS, OUTCOMES, STAGES, fmtCallDuration, fmtDateTime, inr, isCoordination, isCrmAdmin, outcomeMeta, stageMeta, timeAgo, toLocalInput,
+  LOST_REASONS, OUTCOMES, STAGES, fmtCallDuration, fmtDateTime, inr, isCoordination, isCrmAdmin, outcomeMeta, stageMeta, statusBadge, timeAgo, toLocalInput,
   type CrmLead,
 } from "@/lib/crm";
 import { useAuthStore } from "@/store/auth";
@@ -64,7 +64,7 @@ export function LeadDrawer() {
   const { leadId, leadBackTo, closeLead } = useCrmUi();
   return (
     <Dialog open={!!leadId} onOpenChange={(o) => !o && closeLead()}>
-      <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto p-0 gap-0">
+      <DialogContent className="max-w-[min(48rem,calc(100vw-2rem))] max-h-[92vh] overflow-y-auto p-0 gap-0">
         {leadId && <LeadDrawerBody key={leadId} leadId={leadId} onClose={closeLead} backTo={leadBackTo} />}
       </DialogContent>
     </Dialog>
@@ -169,6 +169,8 @@ function LeadDrawerBody({ leadId, onClose, backTo }: { leadId: string; onClose: 
   const closed = lead.stage === "WON" || lead.stage === "LOST";
   const needsValue = outcome === "CONVERTED";
   const needsReason = outcome === "LOST" || outcome === "NOT_INTERESTED";
+  /** Nobody answered: the CRM picks the next date on its own backoff, so there is nothing to choose */
+  const autoSchedules = outcome === "NOT_REACHABLE";
 
   const startEdit = () => {
     setForm({
@@ -187,7 +189,7 @@ function LeadDrawerBody({ leadId, onClose, backTo }: { leadId: string; onClose: 
           <DialogTitle className="flex flex-wrap items-center gap-2 text-xl pr-8">
             {lead.contactName || lead.name}
             <span className={`badge ${stage.badge}`}>{stage.label}</span>
-            {lead.statusLabel && lead.statusLabel !== stage.label && <span className="badge badge-gray" title="Status">{lead.statusLabel}</span>}
+            {lead.statusLabel && lead.statusLabel !== stage.label && <span className={`badge ${statusBadge(lead.statusLabel)}`} title="Status">{lead.statusLabel}</span>}
             {lead.pending && <span className="badge badge-red">Not contacted</span>}
             {lead.overdue && <span className="badge badge-amber">Follow-up overdue</span>}
             {lead.isManual && <span className="badge badge-gray">Manual</span>}
@@ -306,7 +308,7 @@ function LeadDrawerBody({ leadId, onClose, backTo }: { leadId: string; onClose: 
                 followupMutation.mutate({
                   outcome,
                   note: note || undefined,
-                  nextFollowupAt: !needsValue && !needsReason && nextAt ? new Date(nextAt).toISOString() : undefined,
+                  nextFollowupAt: !needsValue && !needsReason && !autoSchedules && nextAt ? new Date(nextAt).toISOString() : undefined,
                   estimatedValue: needsValue && value ? Number(value) : undefined,
                   lostReason: needsReason ? lostReason : undefined,
                 });
@@ -340,7 +342,13 @@ function LeadDrawerBody({ leadId, onClose, backTo }: { leadId: string; onClose: 
                   </select>
                 </div>
               )}
-              {!needsValue && !needsReason && (
+              {autoSchedules && (
+                <p className="text-xs text-muted-foreground rounded-lg bg-muted/50 px-3 py-2">
+                  The next try is set for you: tomorrow, then two days, then four. A fourth day with no
+                  answer closes the lead as <span className="font-medium">Not reachable</span>.
+                </p>
+              )}
+              {!needsValue && !needsReason && !autoSchedules && (
                 <div className="space-y-1.5">
                   <Label>Next follow-up</Label>
                   <div className="flex flex-wrap gap-1.5">

@@ -14,6 +14,7 @@ import { useMe } from "@/lib/erp/me";
 import { CrmTopBar } from "@/components/crm/CrmTopBar";
 import { LeadDrawer } from "@/components/crm/LeadDrawer";
 import { AddInquiryDialog } from "@/components/crm/AddInquiryDialog";
+import { ReorderReminderDialog } from "@/components/crm/ReorderReminderDialog";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard, BarChart3, Users, Bell, Target, Building2,
@@ -50,6 +51,8 @@ const NAV: NavGroup[] = [
   { section: "CRM", icon: Headset, roles: CRM_AND_COORDINATION, items: [
     { href: "/crm",                     label: "Dashboard",                 roles: CRM_ROLES },
     { href: "/crm/leads",               label: "My Leads",                  roles: CRM_ROLES },
+    { href: "/crm/retargeting",         label: "Lead Retargeting",          roles: CRM_ROLES },
+    { href: "/crm/reorders",            label: "Re-order Calls",            roles: [...CRM_ADMIN_ROLES, "SALES"] },
     { href: "/crm/calls",               label: "Call Log",                  roles: CRM_ROLES },
     { href: "/crm/leaderboard",         label: "Leader Dashboard",          roles: CRM_ROLES },
     { href: "/crm/followups-datewise",  label: "Followup Date Wise Report", roles: CRM_ROLES },
@@ -64,6 +67,7 @@ const NAV: NavGroup[] = [
     { href: "/crm-admin/targets",       label: "Weekly Target Summary",     roles: COORDINATION_ROLES },
   ]},
   { section: "CRM Admin", icon: ShieldCheck, roles: CRM_ADMIN_ROLES, items: [
+    { href: "/crm-admin/client-leisure", label: "Client Leisure",                 roles: CRM_ADMIN_ROLES },
     { href: "/crm-admin/lead-summary",   label: "Lead Weekly Summary",            roles: CRM_ADMIN_ROLES },
     { href: "/crm-admin/source-summary", label: "Source Weekly Summary",          roles: CRM_ADMIN_ROLES },
     { href: "/crm-admin/lost",           label: "Lost Leads Report" },
@@ -398,6 +402,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <LeadDrawer />
       <AddInquiryDialog />
+      <ReorderReminderDialog />
     </div>
   );
 }

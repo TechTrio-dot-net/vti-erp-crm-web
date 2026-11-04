@@ -279,7 +279,7 @@ function Integrations() {
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[min(42rem,calc(100vw-2rem))] max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Connect a lead source</DialogTitle></DialogHeader>
           <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); create.mutate(); }}>
             <div className="grid grid-cols-2 gap-3">

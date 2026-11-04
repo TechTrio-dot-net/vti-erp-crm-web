@@ -49,7 +49,7 @@ export function AddInquiryDialog() {
 
   return (
     <Dialog open={inquiryOpen} onOpenChange={(o) => !o && closeInquiry()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-[min(32rem,calc(100vw-2rem))]">
         <DialogHeader><DialogTitle>Add Inquiry</DialogTitle></DialogHeader>
         <form
           className="space-y-3"

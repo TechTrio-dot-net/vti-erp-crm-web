@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, History } from "lucide-react";
 import { api } from "@/lib/api";
-import { addDays, downloadCsv, fmtDateTime, fmtDay, stageMeta, today } from "@/lib/crm";
+import { addDays, downloadCsv, fmtDateTime, fmtDay, stageMeta, statusBadge, today } from "@/lib/crm";
 import { useCrmUi } from "@/store/crm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -180,7 +180,7 @@ function SummaryLeads({ pick, division, manual, onClose }: { pick: Pick | null; 
   });
   return (
     <Dialog open={!!pick} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-[min(48rem,calc(100vw-2rem))] max-h-[85vh] overflow-y-auto">
         <DialogHeader><DialogTitle>{pick?.title}{data ? ` · ${data.rows.length} lead${data.rows.length === 1 ? "" : "s"}` : ""}</DialogTitle></DialogHeader>
         {isError ? <ErrorState message="Could not load these leads — try again" /> : !data ? <LoadingBlock rows={4} /> : data.rows.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">No leads.</p>
@@ -193,7 +193,9 @@ function SummaryLeads({ pick, division, manual, onClose }: { pick: Pick | null; 
                   <p className="text-sm font-semibold truncate">{l.name}</p>
                   <p className="text-xs text-muted-foreground truncate">{[l.phone, l.assignedName, l.campaign ?? l.source].filter(Boolean).join(" · ")}</p>
                 </div>
-                {l.firstContactAt ? <span className="badge badge-gray">{l.statusLabel ?? stageMeta(l.stage).label}</span> : <span className="badge badge-red">Not contacted</span>}
+                {l.firstContactAt
+                  ? <span className={`badge ${statusBadge(l.statusLabel ?? stageMeta(l.stage).label)}`}>{l.statusLabel ?? stageMeta(l.stage).label}</span>
+                  : <span className="badge badge-orange">Not contacted</span>}
                 <span className="text-xs tabular-nums w-32 text-right text-muted-foreground">{fmtDateTime(l.createdAt)}</span>
               </button>
             ))}

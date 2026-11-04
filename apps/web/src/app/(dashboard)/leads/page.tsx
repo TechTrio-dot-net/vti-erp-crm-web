@@ -15,10 +15,10 @@ import {
 import { Skeleton, SkeletonCard, SkeletonTable } from "@/components/ui/skeleton";
 
 const STAGES = [
-  { key: "AWARENESS",   label: "Awareness",   color: "badge-gray"   },
-  { key: "CONTACTED",   label: "Contacted",   color: "badge-blue"   },
-  { key: "PROPOSAL",    label: "Proposal",    color: "badge-purple" },
-  { key: "NEGOTIATION", label: "Negotiation", color: "badge-amber"  },
+  { key: "AWARENESS",   label: "Awareness",   color: "badge-orange" },
+  { key: "CONTACTED",   label: "Contacted",   color: "badge-yellow" },
+  { key: "PROPOSAL",    label: "Proposal",    color: "badge-yellow" },
+  { key: "NEGOTIATION", label: "Negotiation", color: "badge-yellow" },
   { key: "WON",         label: "Won",         color: "badge-green"  },
   { key: "LOST",        label: "Lost",        color: "badge-red"    },
 ] as const;
@@ -405,7 +405,7 @@ export default function LeadsPage() {
 
       {/* Add / edit lead */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-[min(32rem,calc(100vw-2rem))]">
           <DialogHeader><DialogTitle>{editing ? `Edit lead — ${editing.company}` : "Add New Lead"}</DialogTitle></DialogHeader>
           <form onSubmit={submitForm} className="space-y-3 pt-1">
             <div className="grid grid-cols-2 gap-3">
@@ -447,7 +447,7 @@ export default function LeadsPage() {
 
       {/* Convert to client */}
       <Dialog open={!!converting} onOpenChange={(o) => !o && setConverting(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[min(28rem,calc(100vw-2rem))]">
           <DialogHeader><DialogTitle>Convert to client</DialogTitle></DialogHeader>
           <form
             onSubmit={(e) => { e.preventDefault(); if (converting) convertMutation.mutate({ id: converting.id, contactEmail: convertEmail.trim() }); }}
@@ -471,7 +471,7 @@ export default function LeadsPage() {
 
       {/* Delete confirmation */}
       <Dialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-[min(24rem,calc(100vw-2rem))]">
           <DialogHeader><DialogTitle>Delete lead</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground pt-1">
             Delete <strong className="text-foreground">{deleting?.company}</strong>? This can&apos;t be undone.

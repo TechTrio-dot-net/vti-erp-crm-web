@@ -45,6 +45,7 @@ describe('After-call form (phone app)', () => {
 
   describe('question form (app 1.6+)', () => {
     const inHours = (h: number) => new Date(Date.now() + h * 3600_000).toISOString();
+    const daysFromNow = (at: Date | null) => Math.round(((at as Date).getTime() - Date.now()) / 86_400_000);
     let leadId: string;
     beforeEach(async () => {
       const [lead] = await db.insert(leads).values({ companyName: 'Asha Traders', phone: '9876543210', phoneNormalized: '9876543210', assignedTo: bdm.userId }).returning();
@@ -62,10 +63,19 @@ describe('After-call form (phone app)', () => {
       expect(f).toMatchObject({ outcome: 'INTERESTED', connected: true, interested: true, sampleShared: true });
     });
 
-    it('logs a call that did not connect as not reachable, still with a follow-up', async () => {
-      await form('q-2', { connected: false, nextFollowupAt: inHours(3) }).expect(201);
+    it('logs a call that did not connect as not reachable, and books tomorrow itself', async () => {
+      // The form need not send a date at all: an unanswered call is rescheduled by the backoff rule
+      await form('q-2', { connected: false }).expect(201);
       const [f] = await db.select().from(leadFollowups).where(eq(leadFollowups.leadId, leadId));
       expect(f).toMatchObject({ outcome: 'NOT_REACHABLE', connected: false, interested: null });
+      const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
+      expect(daysFromNow(lead.nextFollowupAt)).toBe(1);
+    });
+
+    it('ignores a date the phone sends for a call that did not connect', async () => {
+      await form('q-2b', { connected: false, nextFollowupAt: inHours(3) }).expect(201);
+      const [lead] = await db.select().from(leads).where(eq(leads.id, leadId));
+      expect(daysFromNow(lead.nextFollowupAt)).toBe(1);
     });
 
     it('closes a not-interested lead with its reason', async () => {

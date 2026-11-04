@@ -75,8 +75,8 @@ export function CrmTopBar() {
                   className="w-full text-left px-3 py-2 rounded-md hover:bg-muted/60 flex items-center gap-3"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold truncate">{l.contactName || l.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{l.contactName && l.contactName !== l.name && `${l.name} · `}{l.phone ?? l.email} · {l.assignedName ?? "Unassigned"} · {timeAgo(l.createdAt)}</p>
+                    <p className="text-sm font-semibold truncate">{l.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{l.phone ?? l.email} · {l.assignedName ?? "Unassigned"} · {timeAgo(l.createdAt)}</p>
                   </div>
                   <span className={`badge ${stageMeta(l.stage).badge}`}>{stageMeta(l.stage).label}</span>
                 </button>

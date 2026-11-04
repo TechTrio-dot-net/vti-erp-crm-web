@@ -151,8 +151,9 @@ const BUSINESS_TYPES: BusinessType[] = ['B2B', 'B2C'];
 
 /**
  * Checks the question form's answers — every one is required — and turns them into the follow-up to log:
- * not connected → Not reachable, not interested → Lost with a reason, interested → Interested; any
- * follow-up must be set and fall within 72 hours of the call ending.
+ * not connected → Not reachable, not interested → Lost with a reason, interested → Interested. An
+ * interested lead needs a follow-up set within 72 hours of the call ending; the other two outcomes
+ * set their own date (or none), so the form is not asked for one.
  */
 export function questionFormFollowup(body: AfterCallBody, call: IncomingCall): FollowupInput {
   const yesNo = (value: unknown, question: string) => {
@@ -174,6 +175,15 @@ export function questionFormFollowup(body: AfterCallBody, call: IncomingCall): F
     };
   }
 
+  // A call nobody answered is rescheduled by the backoff rule (followups.ts), so the form's own date
+  // is neither asked for nor used — and the 72-hour window below would refuse the four-day step anyway.
+  if (outcome === 'NOT_REACHABLE') {
+    return {
+      outcome, note: body.note, connected, interested, sampleShared, businessType,
+      callActivity: 'Not connected', statusLabel: 'Not reachable', callDurationSec: call.durationSec,
+    };
+  }
+
   const next = new Date(typeof body.nextFollowupAt === 'string' ? body.nextFollowupAt : NaN);
   if (Number.isNaN(next.getTime())) throw new HttpError(400, 'Set the next follow-up');
   const callEnd = call.startedAt.getTime() + call.durationSec * 1000;
@@ -182,10 +192,11 @@ export function questionFormFollowup(body: AfterCallBody, call: IncomingCall): F
   if (next.getTime() > Math.max(callEnd, Date.now()) + FOLLOWUP_WINDOW_MS + CLOCK_SLACK_MS) {
     throw new HttpError(400, 'The next follow-up must be within 72 hours of the call');
   }
+  // Only an interested lead reaches here: the other two outcomes returned above
   return {
     outcome, note: body.note, nextFollowupAt: next.toISOString(), connected, interested, sampleShared, businessType,
-    callActivity: connected ? 'Connected' : 'Not connected',
-    statusLabel: !connected ? 'Not reachable' : sampleShared ? 'Interested · sample shared' : 'Interested',
+    callActivity: 'Connected',
+    statusLabel: sampleShared ? 'Interested · sample shared' : 'Interested',
     callDurationSec: call.durationSec,
   };
 }

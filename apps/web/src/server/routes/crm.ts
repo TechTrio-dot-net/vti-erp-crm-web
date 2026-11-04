@@ -89,7 +89,7 @@ router.get('/leads', async (req: AuthRequest, res) => {
       const term = q.q.trim();
       const phone = normalizePhone(term);
       const like = `%${term.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
-      conditions.push(or(ilike(leads.companyName, like), ilike(leads.contactName, like), ilike(leads.email, like), phone ? sql`${leads.phoneNormalized} LIKE ${`%${phone}%`}` : undefined));
+      conditions.push(or(ilike(leads.companyName, like), ilike(leads.email, like), phone ? sql`${leads.phoneNormalized} LIKE ${`%${phone}%`}` : undefined));
     }
     if (typeof q.source === 'string' && q.source) conditions.push(eq(leads.source, q.source));
     if (typeof q.campaign === 'string' && q.campaign) conditions.push(eq(leads.campaign, q.campaign));
@@ -139,7 +139,7 @@ router.get('/search', async (req: AuthRequest, res) => {
       .where(
         and(
           bdm ? eq(leads.assignedTo, bdm) : undefined,
-          or(ilike(leads.companyName, like), ilike(leads.contactName, like), phone ? sql`${leads.phoneNormalized} LIKE ${`%${phone}%`}` : undefined, ilike(leads.email, like))
+          or(ilike(leads.companyName, like), phone ? sql`${leads.phoneNormalized} LIKE ${`%${phone}%`}` : undefined, ilike(leads.email, like))
         )
       )
       .orderBy(desc(leads.createdAt))
