@@ -23,6 +23,17 @@ class Prefs(context: Context) {
         get() = sp.getString("userName", "") ?: ""
         set(v) = sp.edit().putString("userName", v).apply()
 
+    /** The CRM role of the signed-in user (SALES, SUPER_ADMIN, …) */
+    var userRole: String
+        get() = sp.getString("userRole", "") ?: ""
+        set(v) = sp.edit().putString("userRole", v).apply()
+
+    /**
+     * A BDM, whose retargeting list is theirs to call through. Someone who signed in before the app
+     * started storing the role has no role yet; they keep the tab and the CRM decides.
+     */
+    val isBdm: Boolean get() = userRole.isEmpty() || userRole == "SALES"
+
     /** Only send calls whose number is a CRM lead (for personal phones) */
     var leadsOnly: Boolean
         get() = sp.getBoolean("leadsOnly", false)
@@ -90,6 +101,11 @@ class Prefs(context: Context) {
         get() = sp.getString("lastRecordingMessage", "") ?: ""
         set(v) = sp.edit().putString("lastRecordingMessage", v).apply()
 
+    /** The maker's "autostart" screen was opened (Xiaomi, Oppo, Vivo); Android can't read that setting itself */
+    var autostartOpened: Boolean
+        get() = sp.getBoolean("autostartOpened", false)
+        set(v) = sp.edit().putBoolean("autostartOpened", v).apply()
+
     /** Today's figures from the CRM's last sync answer, and the day they belong to ("2026-09-29") */
     var todayStats: String
         get() = sp.getString("todayStats", "") ?: ""
@@ -99,7 +115,7 @@ class Prefs(context: Context) {
 
     fun signOut() {
         sp.edit()
-            .remove("accessToken").remove("refreshToken").remove("userName")
+            .remove("accessToken").remove("refreshToken").remove("userName").remove("userRole")
             .remove("lastCallTimestamp").remove("lastSyncAt").remove("lastSyncMessage").remove("dialerStatus").remove("todayStats")
             .remove(PendingForms.KEY).remove(RecordingUploader.KEY).remove("lastRecordingMessage").remove("lastRecordingSilent")
             .apply()

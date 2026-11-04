@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
@@ -14,7 +13,6 @@ interface Task {
 }
 
 export default function PortalApprovalsPage() {
-  const queryClient = useQueryClient();
   const { data: tasks = [], refetch } = useQuery({
     queryKey: ["portal-tasks"],
     queryFn: () => api<Task[]>("/tasks"),

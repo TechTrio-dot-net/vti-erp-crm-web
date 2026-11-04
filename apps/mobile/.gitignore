@@ -5,4 +5,6 @@ local.properties
 .idea/
 *.keystore
 *.jks
+# The release signing key and its passwords: back these up, never commit them
+keystore.properties
 dist/

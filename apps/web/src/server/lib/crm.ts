@@ -36,6 +36,12 @@ function requireRoles(roles: string[]) {
 
 export const requireCrmAdmin = requireRoles(CRM_ADMIN_ROLES);
 
+/**
+ * Super Admin alone. Deliberately stricter than requireCrmAdmin (which also lets Management through)
+ * and not reachable through Roles & Permissions: used for allotting lead-retargeting batches.
+ */
+export const requireSuperAdmin = requireRoles(['SUPER_ADMIN']);
+
 /** CRM roles pass; coordination may only make the read-only requests in COORDINATION_CRM_READS */
 export function requireCrm(req: Request, res: Response, next: NextFunction): void {
   const role = (req as AuthRequest).user?.role;

@@ -1,5 +1,5 @@
 import { Router, type Response } from 'express';
-import { and, asc, count, desc, eq, gte, ilike, inArray, isNotNull, isNull, lt, lte, ne, notInArray, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, ilike, inArray, isNotNull, isNull, lt, ne, or, sql, type SQL } from 'drizzle-orm';
 import { db } from '../db/index';
 import {
   bdmLeaves,
@@ -11,17 +11,15 @@ import {
   leadAssignments,
   leadFollowups,
   leads,
-  services,
   users,
   whatsappLogs,
   type LeadStage,
 } from '../db/schema';
 import { authMiddleware, invalidateAuthUser, type AuthRequest } from '../lib/auth';
 import {
-  APP_TIMEZONE,
   BDM_ROLE,
   CLOSED_STAGES,
-  OPEN_STAGES,
+  CRM_ADMIN_ROLES,
   bdmScope,
   dateRange,
   isCrmAdmin,
@@ -29,11 +27,11 @@ import {
   localDate,
   normalizePhone,
   requireCrm,
-  requireCrmAdmin,
   todayLocal,
 } from '../lib/crm';
 import { HttpError, isUuid, optionalId, pickColumns, sendError, uuidParam } from '../lib/http';
 import { hashPassword } from '../utils/password';
+import { roleOrPermission } from '../erp/access';
 import { isOpen, leadQuery, startOfTodayLocal } from '../services/leadQueries';
 import { assignLead, assignWaitingLeads, isAssignableBdm, notifyAssignees, transferLeads } from '../services/leadAssignment';
 import { intakeLead } from '../services/leadIntake';
@@ -290,7 +288,7 @@ router.post('/leads/:id/whatsapp', async (req: AuthRequest, res) => {
   }
 });
 
-router.post('/leads/:id/assign', requireCrmAdmin, async (req: AuthRequest, res) => {
+router.post('/leads/:id/assign', roleOrPermission(CRM_ADMIN_ROLES, 'crm.leads.assign'), async (req: AuthRequest, res) => {
   try {
     const toUserId = optionalId(req.body?.toUserId, 'toUserId') ?? null;
     if (toUserId && !(await isAssignableBdm(toUserId))) throw new HttpError(400, 'That user cannot receive leads');
@@ -307,7 +305,7 @@ router.post('/leads/:id/assign', requireCrmAdmin, async (req: AuthRequest, res) 
   }
 });
 
-router.delete('/leads/:id', requireCrmAdmin, async (req, res) => {
+router.delete('/leads/:id', roleOrPermission(CRM_ADMIN_ROLES, 'crm.leads.delete'), async (req, res) => {
   try {
     const [deleted] = await db.delete(leads).where(eq(leads.id, req.params.id as string)).returning({ id: leads.id });
     if (!deleted) return res.status(404).json({ message: 'Lead not found' });
@@ -319,7 +317,7 @@ router.delete('/leads/:id', requireCrmAdmin, async (req, res) => {
 
 // ─── Transfers ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-router.post('/transfer', requireCrmAdmin, async (req: AuthRequest, res) => {
+router.post('/transfer', roleOrPermission(CRM_ADMIN_ROLES, 'crm.transfer'), async (req: AuthRequest, res) => {
   try {
     const fromUserId = optionalId(req.body?.fromUserId, 'fromUserId');
     if (!fromUserId) throw new HttpError(400, 'Choose who to transfer leads from');
@@ -406,7 +404,7 @@ router.get('/bdms', async (req: AuthRequest, res) => {
 });
 
 /** BDM Master: create a salesperson with their own login */
-router.post('/bdms', requireCrmAdmin, async (req: AuthRequest, res) => {
+router.post('/bdms', roleOrPermission(CRM_ADMIN_ROLES, 'masters.bdm'), async (req: AuthRequest, res) => {
   try {
     const { name, username, email, password, phone } = req.body ?? {};
     if (!name?.trim() || !email?.trim()) throw new HttpError(400, 'Name and email are required');
@@ -432,7 +430,7 @@ router.post('/bdms', requireCrmAdmin, async (req: AuthRequest, res) => {
   }
 });
 
-router.patch('/bdms/:id', requireCrmAdmin, async (req: AuthRequest, res) => {
+router.patch('/bdms/:id', roleOrPermission(CRM_ADMIN_ROLES, 'masters.bdm'), async (req: AuthRequest, res) => {
   try {
     const id = req.params.id as string;
     const updates: Partial<typeof users.$inferInsert> = pickColumns(users, req.body, [
@@ -523,7 +521,7 @@ router.get('/leaves', async (req: AuthRequest, res) => {
  * Marks leave for a BDM. If the leave covers today they are stopped immediately, and their open leads can be
  * handed to another BDM or back through the rotation.
  */
-router.post('/leaves', requireCrmAdmin, async (req: AuthRequest, res) => {
+router.post('/leaves', roleOrPermission(CRM_ADMIN_ROLES, 'crm.transfer'), async (req: AuthRequest, res) => {
   try {
     const userId = optionalId(req.body?.userId, 'userId');
     const { fromDate, toDate } = req.body ?? {};
@@ -563,7 +561,7 @@ router.post('/leaves', requireCrmAdmin, async (req: AuthRequest, res) => {
   }
 });
 
-router.delete('/leaves/:id', requireCrmAdmin, async (req, res) => {
+router.delete('/leaves/:id', roleOrPermission(CRM_ADMIN_ROLES, 'crm.transfer'), async (req, res) => {
   try {
     const [deleted] = await db.delete(bdmLeaves).where(eq(bdmLeaves.id, req.params.id as string)).returning({ id: bdmLeaves.id });
     if (!deleted) return res.status(404).json({ message: 'Leave not found' });
@@ -575,7 +573,7 @@ router.delete('/leaves/:id', requireCrmAdmin, async (req, res) => {
 
 // ─── Campaign → BDM adjustment ─────────────────────────────────────────────────────────────────────────────────
 
-router.get('/campaigns', requireCrmAdmin, async (req, res) => {
+router.get('/campaigns', roleOrPermission(CRM_ADMIN_ROLES, 'crm.campaigns.manage'), async (req, res) => {
   try {
     const { from, to } = dateRange(req.query, 90);
     const [stats, perBdm, rules] = await Promise.all([
@@ -618,7 +616,7 @@ router.get('/campaigns', requireCrmAdmin, async (req, res) => {
   }
 });
 
-router.put('/campaigns/rules', requireCrmAdmin, async (req, res) => {
+router.put('/campaigns/rules', roleOrPermission(CRM_ADMIN_ROLES, 'crm.campaigns.manage'), async (req, res) => {
   try {
     const campaign = typeof req.body?.campaign === 'string' ? req.body.campaign.trim() : '';
     if (!campaign) throw new HttpError(400, 'Campaign name is required');
@@ -634,7 +632,7 @@ router.put('/campaigns/rules', requireCrmAdmin, async (req, res) => {
 });
 
 /** Re-distributes a campaign's open leads (e.g. after changing its BDMs) */
-router.post('/campaigns/reassign', requireCrmAdmin, async (req: AuthRequest, res) => {
+router.post('/campaigns/reassign', roleOrPermission(CRM_ADMIN_ROLES, 'crm.campaigns.manage'), async (req: AuthRequest, res) => {
   try {
     const campaign = typeof req.body?.campaign === 'string' ? req.body.campaign.trim() : '';
     if (!campaign) throw new HttpError(400, 'Campaign name is required');

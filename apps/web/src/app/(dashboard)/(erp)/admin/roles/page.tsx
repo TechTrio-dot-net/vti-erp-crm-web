@@ -223,6 +223,10 @@ function Roles() {
                 );
               })}
             </div>
+            <p className="text-xs text-neutral-500">
+              Allotting a lead-retargeting batch is not listed here: it is reserved for Super Admin and cannot be granted to any
+              other role. Every BDM can still call and update the leads already allotted to them.
+            </p>
           </div>
         </Card>
       </div>

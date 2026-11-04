@@ -33,6 +33,8 @@ export default function RetargetingPage() {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState("");
   const [date, setDate] = useState("");
+  // Allotting a batch is the Super Admin's alone (POST /crm/retargeting/allot refuses anyone else)
+  const canAllot = me?.role === "SUPER_ADMIN";
 
   const { data: board, isLoading, isError } = useQuery({ queryKey: ["crm", "retargeting"], queryFn: () => api<Board>("/crm/retargeting") });
   // A BDM only ever gets their own row back, so the board picks itself for them; an admin lands on
@@ -107,15 +109,21 @@ export default function RetargetingPage() {
                     </div>
                   </div>
 
-                  <Button
-                    className="w-full"
-                    disabled={pending || take === 0}
-                    onClick={(e) => { e.stopPropagation(); allot.mutate(r.userId); }}
-                  >
-                    {pending ? "Allotting…" : take === 0
-                      ? (r.pool === 0 ? "Nothing left to retarget" : `Today's ${board.dailyLimit} already allotted`)
-                      : <><RefreshCw className="size-4" />Allot {take} old leads</>}
-                  </Button>
+                  {canAllot ? (
+                    <Button
+                      className="w-full"
+                      disabled={pending || take === 0}
+                      onClick={(e) => { e.stopPropagation(); allot.mutate(r.userId); }}
+                    >
+                      {pending ? "Allotting…" : take === 0
+                        ? (r.pool === 0 ? "Nothing left to retarget" : `Today's ${board.dailyLimit} already allotted`)
+                        : <><RefreshCw className="size-4" />Allot {take} old leads</>}
+                    </Button>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      {r.allottedToday > 0 ? "Today's list is ready — call them from the list below." : "Waiting for the Super Admin to allot today's list."}
+                    </p>
+                  )}
                 </div>
               );
             })}

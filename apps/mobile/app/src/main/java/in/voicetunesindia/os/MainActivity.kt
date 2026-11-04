@@ -72,6 +72,13 @@ class MainActivity : Activity() {
     /** Bumped on every new lead request, so a slow older answer never replaces a newer one */
     private var leadsRequest = 0
 
+    // Retargeting: today's batch of old leads the Super Admin allotted to this BDM
+    private var retargetRows = JSONArray()
+    private var retargetLoaded = false
+    private var retargetLoading = false
+    private var retargetError: String? = null
+    private var retargetRequest = 0
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = Prefs(this)
@@ -128,6 +135,7 @@ class MainActivity : Activity() {
         renderNav()
         when (tab) {
             TAB_LEADS -> renderLeads()
+            TAB_RETARGET -> renderRetarget()
             TAB_MORE -> renderMore()
             else -> renderHome()
         }
@@ -144,9 +152,10 @@ class MainActivity : Activity() {
     private fun renderNav() {
         nav.removeAllViews()
         val setupLeft = setupSteps().count { !it.done }
-        listOf(
+        listOfNotNull(
             Triple(TAB_HOME, "⌂", "Home"),
             Triple(TAB_LEADS, "☰", "Leads"),
+            Triple(TAB_RETARGET, "↺", "Retarget").takeIf { prefs.isBdm },
             Triple(TAB_MORE, "⋯", "More"),
         ).forEach { (key, glyph, label) ->
             val on = tab == key
@@ -502,6 +511,77 @@ class MainActivity : Activity() {
     }
 
     /** One lead: name, stage and next follow-up; tap for details, Call to dial */
+    // ─── Retargeting: the old leads allotted for today ────────────────────────────────────────────
+
+    /**
+     * Today's retargeting batch: old leads a Super Admin handed to this BDM on the CRM website. Call them
+     * one by one; the after-call form logs what happened, exactly as for any other call. The phone never
+     * allots a batch — only a Super Admin can, on the website.
+     */
+    private fun renderRetarget() = with(ui) {
+        root.addView(text("Retargeting", 24f, bold = true))
+        root.addView(text("Old leads given to you for today. Call each one and log what happened.", 13f, Palette.muted).withMargins(top = 2, bottom = 12))
+
+        if (!retargetLoaded && !retargetLoading) {
+            retargetLoading = true
+            root.post { loadRetarget() }
+        }
+
+        val done = (0 until retargetRows.length()).count { retargetRows.getJSONObject(it).optBoolean("done") }
+        val list = card()
+        when {
+            retargetLoading && retargetRows.length() == 0 -> list.addView(loadingRow("Loading today’s list…"))
+            retargetError != null && retargetRows.length() == 0 -> {
+                list.addView(text("Couldn’t load the list", 15f, bold = true))
+                list.addView(text(retargetError!!, 13f, Palette.muted).withMargins(top = 2))
+                list.addView(secondaryButton("Try again") { loadRetarget() })
+            }
+            retargetRows.length() == 0 -> {
+                list.addView(text("Nothing to retarget today.", 15f, bold = true))
+                list.addView(text("A Super Admin hands out the day’s old leads on the CRM website. Check again later.", 13f, Palette.muted).withMargins(top = 2))
+                list.addView(secondaryButton(if (retargetLoading) "Checking…" else "Check again") { if (!retargetLoading) loadRetarget() })
+            }
+            else -> {
+                list.addView(text("$done of ${retargetRows.length()} called", 13f, Palette.muted, bold = true).withMargins(bottom = 4))
+                for (i in 0 until retargetRows.length()) {
+                    if (i > 0) list.addView(divider())
+                    list.addView(leadRow(retargetRows.getJSONObject(i)))
+                }
+                list.addView(secondaryButton(if (retargetLoading) "Refreshing…" else "Refresh") { if (!retargetLoading) loadRetarget() })
+            }
+        }
+        root.addView(list)
+    }
+
+    /** GET /crm/retargeting/leads — with no BDM named the CRM answers with the signed-in BDM's own batch */
+    private fun loadRetarget() {
+        retargetLoading = true
+        retargetError = null
+        val request = ++retargetRequest
+        if (tab == TAB_RETARGET) render()
+        io.execute {
+            val (data, error) = try {
+                ApiClient(prefs).get("/crm/retargeting/leads") to null
+            } catch (e: AuthExpiredException) {
+                prefs.signOut()
+                null to (e.message ?: "Please sign in again")
+            } catch (e: Exception) {
+                null to friendlyError(e)
+            }
+            runOnUiThread {
+                if (request != retargetRequest) return@runOnUiThread
+                retargetLoading = false
+                retargetLoaded = true
+                if (data != null) {
+                    retargetRows = data.optJSONArray("rows") ?: JSONArray()
+                } else {
+                    retargetError = error
+                }
+                if (tab == TAB_RETARGET || !prefs.isSignedIn) render()
+            }
+        }
+    }
+
     private fun leadRow(lead: JSONObject): LinearLayout = with(ui) {
         val row = LinearLayout(this@MainActivity).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -612,6 +692,7 @@ class MainActivity : Activity() {
     }
 
     /** Dials straight away when the phone permission is on (the after-call form follows), else opens the dialler */
+    @Suppress("MissingPermission") // DialerService.canDial checks CALL_PHONE, and the dialler is the fallback
     private fun callLead(phone: String) {
         val number = phone.filter { it.isDigit() || it == '+' }
         if (number.isEmpty()) return toast("This lead has no mobile number")
@@ -674,11 +755,35 @@ class MainActivity : Activity() {
                     if (Build.VERSION.SDK_INT >= 33) " Greyed out (“Restricted setting”)? Open App info, tap ⋮ → “Allow restricted settings”, then try again." else "",
                 secondary = if (Build.VERSION.SDK_INT >= 33) "Open App info" to appInfo else null)
         }
+        if (AUTOSTART_BRANDS.any { Build.MANUFACTURER.lowercase().contains(it) || Build.BRAND.lowercase().contains(it) }) {
+            steps += Step("Autostart", "Xiaomi, Redmi, Poco, Oppo and Vivo phones stop this app after a restart until it may start on its own \u2014 the Call button and sync then stay off.",
+                prefs.autostartOpened, "Open", { openAutostartSettings() },
+                help = "Find Voice Tunes India in the list and switch it on.")
+        }
         val pm = getSystemService(PowerManager::class.java)
         steps += Step("Unrestricted battery", "Stops the phone from pausing sync and the Call button in the background.",
             pm == null || pm.isIgnoringBatteryOptimizations(packageName), "Open", appInfo,
             help = "App info → Battery → Unrestricted.")
         return steps
+    }
+
+    /** The phone maker's own "autostart" / "background start" screen; App info if this phone has none */
+    private fun openAutostartSettings() {
+        prefs.autostartOpened = true
+        val screens = listOf(
+            "com.miui.securitycenter" to "com.miui.permcenter.autostart.AutoStartManagementActivity",
+            "com.coloros.safecenter" to "com.coloros.safecenter.permission.startup.StartupAppListActivity",
+            "com.oppo.safe" to "com.oppo.safe.permission.startup.StartupAppListActivity",
+            "com.vivo.permissionmanager" to "com.vivo.permissionmanager.activity.BgStartUpManagerActivity",
+        )
+        val opened = screens.any { (pkg, cls) ->
+            try { startActivity(Intent().setClassName(pkg, cls)); true } catch (e: Exception) { false }
+        }
+        if (!opened) {
+            toast("Settings \u2192 Apps \u2192 Voice Tunes India \u2192 Autostart")
+            startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
+        }
+        root.post { render() }
     }
 
     private fun renderSetup() = with(ui) {
@@ -914,9 +1019,13 @@ class MainActivity : Activity() {
         const val REQUEST_RECORDINGS = 3
         const val TAB_HOME = "home"
         const val TAB_LEADS = "leads"
+        const val TAB_RETARGET = "retarget"
         const val TAB_MORE = "more"
         const val PAGE_SIZE = 30
         const val AUTO_SYNC_MS = 60_000L
+
+        /** Phone makers whose software kills apps after a restart unless "autostart" is allowed */
+        val AUTOSTART_BRANDS = listOf("xiaomi", "redmi", "poco", "oppo", "realme", "vivo")
 
         /** The CRM's lead lists (GET /crm/leads?status=…) */
         val LEAD_FILTERS = listOf(

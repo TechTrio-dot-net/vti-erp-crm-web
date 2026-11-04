@@ -31,8 +31,19 @@ export const PERMISSIONS: Record<string, [string, string]> = {
 
   'employees.view': ['View employees', 'organization'],
   'employees.manage': ['Manage employees', 'organization'],
+  'divisions.manage': ['Manage divisions', 'organization'],
   'departments.manage': ['Manage departments', 'organization'],
   'designations.manage': ['Manage designations', 'organization'],
+
+  'masters.bdm': ['Manage BDM Master (add, edit, calling rotation)', 'masters'],
+  'masters.categories': ['Manage lead categories and sub-categories', 'masters'],
+
+  'crm.leads.assign': ['Assign and reassign leads to BDMs', 'sales crm'],
+  'crm.leads.delete': ['Delete leads', 'sales crm'],
+  'crm.transfer': ['Lead transfer and BDM leave', 'sales crm'],
+  'crm.campaigns.manage': ['Campaign lead \u2013 BDM adjustment rules', 'sales crm'],
+  // Allotting a retargeting batch is Super Admin only and deliberately has no permission slug:
+  // see requireSuperAdmin in lib/crm.ts.
 
   'users.manage': ['Assign any role, including Super Admin', 'administration'],
   'roles.manage': ['Manage roles and permissions', 'administration'],

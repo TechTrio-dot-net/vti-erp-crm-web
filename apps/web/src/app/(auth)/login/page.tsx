@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuthStore } from "@/store/auth";
+import { useAuthStore, type User } from "@/store/auth";
 import { Eye, EyeOff, LayoutDashboard, Target, AtSign, Lock } from "lucide-react";
 import { BrandLogo, BrandMark } from "@/components/BrandLogo";
 import { landingPath } from "@/lib/permissions";
@@ -50,7 +50,7 @@ export default function LoginPage() {
       }
       if (!res.ok) throw new Error(data.message || "Login failed");
       if (!data.user || !data.token) throw new Error("Invalid response");
-      setAuth(data.user as any, data.token);
+      setAuth(data.user as User, data.token);
       const role = (data.user as { role?: string })?.role ?? "";
       router.push(landingPath(role));
     } catch (err) {

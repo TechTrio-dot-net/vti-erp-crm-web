@@ -59,8 +59,11 @@ describe('Roles and permissions', () => {
       module: expect.any(String),
       permissions: expect.arrayContaining([expect.objectContaining({ id: expect.any(String), slug: expect.any(String), name: expect.any(String) })]),
     });
+    // Every permission in the catalogue reaches the role editor, in exactly one module group
     const total = body.data.reduce((sum: number, group: { permissions: unknown[] }) => sum + group.permissions.length, 0);
-    expect(total).toBe(24);
+    expect(total).toBe(ALL_PERMISSIONS.length);
+    const slugs = body.data.flatMap((g: { permissions: Array<{ slug: string }> }) => g.permissions.map((p) => p.slug));
+    expect(new Set(slugs)).toEqual(new Set(ALL_PERMISSIONS));
   });
 
   it('creates and updates a role', async () => {

@@ -46,6 +46,7 @@ class ApiClient(private val prefs: Prefs) {
         prefs.refreshToken = json.optString("refreshToken").ifEmpty { throw ApiException(500, "Server did not return a refresh token — update the CRM") }
         val user = json.getJSONObject("user")
         prefs.userName = user.optString("name")
+        prefs.userRole = user.optString("role")
         if (user.optString("role") == "CLIENT") {
             prefs.signOut()
             throw ApiException(403, "Client accounts can't use call tracking")

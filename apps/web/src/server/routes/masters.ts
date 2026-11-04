@@ -4,7 +4,7 @@ import type { PgTable } from 'drizzle-orm/pg-core';
 import { db } from '../db/index';
 import { categories, departments, designations, divisions, services } from '../db/schema';
 import { authMiddleware } from '../lib/auth';
-import { CRM_ADMIN_ROLES, HR_ROLES, requireCrmAdmin, requireHr } from '../lib/crm';
+import { CRM_ADMIN_ROLES, HR_ROLES } from '../lib/crm';
 import { pickColumns, sendError, uuidParam } from '../lib/http';
 import { roleOrPermission } from '../erp/access';
 import { flushLookups } from '../erp/cache';
@@ -102,7 +102,7 @@ crud(
   undefined,
   { beforeCreate: withServiceSlug, afterWrite: flushLookups }
 );
-crud('/divisions', divisions as never, ['name', 'description', 'active'], requireHr, 'division');
+crud('/divisions', divisions as never, ['name', 'description', 'active'], roleOrPermission(HR_ROLES, 'divisions.manage'), 'division');
 crud(
   '/departments',
   departments as never,
@@ -113,7 +113,7 @@ crud(
 );
 crud('/designations', designations as never, ['name', 'description', 'active'], roleOrPermission(HR_ROLES, 'designations.manage'), 'designation');
 // ?level=main → main categories, ?level=sub → sub categories, ?parentId= → subs of one main category
-crud('/categories', categories as never, ['name', 'parentId', 'active'], requireCrmAdmin, 'category', (q) =>
+crud('/categories', categories as never, ['name', 'parentId', 'active'], roleOrPermission(CRM_ADMIN_ROLES, 'masters.categories'), 'category', (q) =>
   typeof q.parentId === 'string' && q.parentId
     ? eq(categories.parentId, q.parentId)
     : q.level === 'main'

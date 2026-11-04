@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware, type AuthRequest } from '../lib/auth';
-import { BDM_ROLE, isCrmAdmin, isDateString, requireCrm, todayLocal } from '../lib/crm';
+import { BDM_ROLE, isCrmAdmin, isDateString, requireCrm, requireSuperAdmin, todayLocal } from '../lib/crm';
 import { HttpError, optionalId, sendError } from '../lib/http';
 import {
   DAILY_RETARGET_LIMIT,
@@ -57,8 +57,8 @@ router.get('/leads', async (req: AuthRequest, res) => {
   }
 });
 
-/** The button: hands this BDM their batch of old leads for today */
-router.post('/allot', async (req: AuthRequest, res) => {
+/** The button: hands this BDM their batch of old leads for today. Super Admin only. */
+router.post('/allot', requireSuperAdmin, async (req: AuthRequest, res) => {
   try {
     const userId = scopeTo(req, req.body?.userId);
     res.json(await allotRetargetBatch({ userId, byUserId: req.user!.id }));

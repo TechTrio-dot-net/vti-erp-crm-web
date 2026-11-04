@@ -17,6 +17,8 @@ calls** is switched on (see below).
 - **Offline:** a form filled in without a connection is kept on the phone and uploaded by the next sync; it is
   never saved twice.
 - **Missed calls from your leads** show a "Call back" notification.
+- **Retargeting tab:** the old leads a Super Admin allotted to you for today, oldest first, one tap to call. The
+  after-call form logs the outcome as usual. Only a Super Admin can hand out a batch, and only on the CRM website.
 - **Sync:** a few seconds after every call ends, every 15 minutes in the background, and on "Sync now". The first sync
   after sign-in starts from the beginning of that day — older history is never sent.
 - **When the form opens** (in the app): after every call, only after calls with CRM leads, or never. "Personal phone"
@@ -62,8 +64,45 @@ sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
 On Windows, install [Android Studio](https://developer.android.com/studio) (it includes JDK 17 and the SDK), open
 `apps/mobile` and use **Build → Generate APKs**, or run `gradlew.bat assembleRelease -PcrmUrl=…` from its terminal.
 
-The APK is signed with the building computer's debug key. Keep building updates on the same computer (or back up
-`~/.android/debug.keystore`) — an update signed with a different key won't install over the old app.
+### Signing
+
+Release builds are signed with the project's own key, `apps/mobile/vti-release.jks`, whose passwords sit in
+`apps/mobile/keystore.properties`. Neither file is in git (see `.gitignore`), so:
+
+- **Back up both files somewhere safe** (password manager, company drive). Android identifies the app by this key.
+  Lose it and no future build can ever update an installed app again — every phone would need the app removed and
+  reinstalled, losing its sign-in.
+- **Copy both files to any other computer** that needs to build releases. Then the APK installs as an update
+  wherever it is built, which is the whole point of having the key.
+- Without `keystore.properties` the release build falls back to the debug key so a fresh clone still compiles, but
+  that APK **will not install over** a properly signed one. `./gradlew assembleRelease` prints which key it used.
+
+The signing certificate's fingerprints — not secret, safe to keep here. Use them to confirm a restored backup is
+the right key, and when registering the app with Google services (Firebase, Maps, Google sign-in):
+
+```
+SHA-256  F5:E9:41:58:5F:6F:ED:F3:09:2B:6A:21:3A:16:31:61:EA:D7:EA:82:0B:99:70:32:F7:8B:80:FA:02:77:DE:47
+SHA-1    09:4B:6A:C1:A4:04:6A:10:DE:94:26:4D:54:E4:02:C0:B8:7E:4A:8C
+```
+
+Check a restored copy with:
+
+```bash
+keytool -list -v -keystore vti-release.jks -alias vti | grep SHA256
+```
+
+To create the key again from scratch (only if it was lost — see the warning above):
+
+```bash
+keytool -genkeypair -v -keystore vti-release.jks -alias vti -keyalg RSA -keysize 4096 -validity 10000
+```
+
+Then write `storeFile=vti-release.jks`, `storePassword=…`, `keyAlias=vti`, `keyPassword=…` into
+`apps/mobile/keystore.properties`.
+
+**Moving from the old debug-signed builds:** phones carrying an APK built before this key existed must have
+**Voice Tunes India uninstalled once** before the new one installs ("App not installed" otherwise). This is the last
+time that is needed — after it, every update installs straight over the top.
 
 ## Install on a phone
 
@@ -76,6 +115,8 @@ The APK is signed with the building computer's debug key. Keep building updates 
    On Xiaomi, Vivo and Oppo phones also allow **Display pop-up windows while running in the background**
    (App info → Other permissions). Without these, the form waits in a notification instead.
 5. Set battery use to **Unrestricted** so the Call button stays connected when the screen is off.
+6. On Xiaomi, Redmi, Poco, Oppo, Realme and Vivo phones tap **Autostart** in the app's setup list and switch
+   Voice Tunes India on, or the phone stops the app after every restart (Call button offline, no sync).
 
 For local development the address can be the computer running `pnpm dev` on the office Wi-Fi, e.g.
 `http://192.168.1.4:3000`.

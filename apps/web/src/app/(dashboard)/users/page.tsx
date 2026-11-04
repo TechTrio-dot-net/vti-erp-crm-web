@@ -246,8 +246,8 @@ export default function UsersPage() {
   );
 
   const createMutation = useMutation({
-    mutationFn: (body: object) => api("/users", { method: "POST", body: JSON.stringify(body) }),
-    onSuccess: (newUser: any) => {
+    mutationFn: (body: object) => api<{ name?: string }>("/users", { method: "POST", body: JSON.stringify(body) }),
+    onSuccess: (newUser) => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setCreateOpen(false);
       setForm(EMPTY_FORM);

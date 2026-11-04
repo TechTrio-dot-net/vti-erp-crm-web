@@ -59,7 +59,7 @@ const NAV: NavGroup[] = [
     { href: "/crm/followups",           label: "Followup Report",           roles: CRM_ROLES },
     { href: "/crm/followup-pivot",      label: "Followup Pivot Report",     roles: CRM_ROLES },
     { href: "/crm/closed",              label: "Closed Lead Report" },
-    { href: "/crm/transfer",            label: "Lead Transfer & Leave",     roles: CRM_ADMIN_ROLES },
+    { href: "/crm/transfer",            label: "Lead Transfer & Leave",     roles: CRM_ADMIN_ROLES, permission: "crm.transfer" },
     { href: "/crm/filter",              label: "Lead Filter",               roles: CRM_ROLES },
     { href: "/crm/bdm-time",            label: "BDM Time Analysis" },
     // CRM admin reports coordination may read; admins find them under CRM Admin
@@ -81,10 +81,10 @@ const NAV: NavGroup[] = [
     { href: "/crm-admin/targets",        label: "Weekly Target Summary" },
     { href: "/crm-admin/whatsapp",       label: "WhatsApp Message Log",           roles: CRM_ADMIN_ROLES },
     { href: "/crm-admin/old-crm",        label: "Old CRM Archive",                roles: CRM_ADMIN_ROLES },
-    { href: "/crm-admin/campaigns",      label: "Campaign Lead - BDM Adjustment", roles: CRM_ADMIN_ROLES },
+    { href: "/crm-admin/campaigns",      label: "Campaign Lead - BDM Adjustment", roles: CRM_ADMIN_ROLES, permission: "crm.campaigns.manage" },
   ]},
   { section: "Masters", icon: Database, roles: CRM_ADMIN_ROLES, items: [
-    { href: "/masters/bdm",      label: "BDM Master" },
+    { href: "/masters/bdm",      label: "BDM Master", roles: CRM_ADMIN_ROLES, permission: "masters.bdm" },
   ]},
   { section: "Catalog & Pricing", icon: Layers, items: [
     { href: "/catalog/services",      label: "Services",      icon: Layers, permission: "services.manage" },
@@ -164,9 +164,12 @@ function visibleGroups(role: string, can: (permission: Permission) => boolean): 
     if (i.roles || i.permission) return (!!i.roles && i.roles.includes(role)) || (!!i.permission && can(i.permission));
     return groupRoles ? true : canAccessNav(i.href, role);
   };
+  const inSection = (g: NavGroup) => !g.roles || g.roles.includes(role);
   return NAV.map((g) => ({
     ...g,
-    items: g.roles && !g.roles.includes(role) ? [] : g.items.filter((i) => itemVisible(i, g.roles)),
+    // Outside the section's roles only its permission-granted items show, so a grant in
+    // Roles & Permissions is enough to reach a page without also widening the section's roles.
+    items: g.items.filter((i) => itemVisible(i, g.roles) && (inSection(g) || !!i.permission)),
   })).filter((g) => g.items.length > 0);
 }
 
