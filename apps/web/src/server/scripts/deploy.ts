@@ -17,7 +17,8 @@ async function waitForDatabase(attempts = 30) {
       await pool.query('SELECT 1');
       return;
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== 'ECONNREFUSED' || i >= attempts) throw err;
+      const code = (err as NodeJS.ErrnoException).code;
+      if ((code !== 'ECONNREFUSED' && code !== '57P03') || i >= attempts) throw err;
       if (i === 1) console.log('Waiting for PostgreSQL to accept connections…');
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
