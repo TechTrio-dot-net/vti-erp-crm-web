@@ -73,6 +73,8 @@ export function QuotationDocument({ quotation: q, company }: { quotation: Quotat
         width={2482}
         height={3508}
         unoptimized
+        // Hidden on screen, so a lazy image would never load and the PDF would print blank.
+        loading="eager"
         className="print-letterhead pointer-events-none hidden print:fixed print:left-0 print:top-0 print:block print:h-[297mm] print:w-[210mm]"
       />
 

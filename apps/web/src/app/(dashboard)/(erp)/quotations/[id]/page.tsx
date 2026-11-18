@@ -33,7 +33,15 @@ const STATUS_ACTIONS: Record<QuotationStatus, { label: string; variant: "primary
  * letterhead paper); "letterhead" prints it on every page, for "Save as PDF". The page title
  * becomes the default PDF file name while the dialog is open.
  */
-function printQuotation(mode: "plain" | "letterhead", number: string) {
+async function printQuotation(mode: "plain" | "letterhead", number: string) {
+  if (mode === "letterhead") {
+    // Make sure the letterhead is downloaded and decoded before the dialog snapshots the page.
+    const img = document.querySelector<HTMLImageElement>("img.print-letterhead");
+    if (img) {
+      img.loading = "eager";
+      await img.decode().catch(() => undefined);
+    }
+  }
   const root = document.documentElement;
   const title = document.title;
   root.dataset.printMode = mode;
