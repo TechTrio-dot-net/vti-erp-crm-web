@@ -73,7 +73,7 @@ export function QuotationDocument({ quotation: q, company }: { quotation: Quotat
         width={2482}
         height={3508}
         unoptimized
-        className="pointer-events-none hidden print:fixed print:left-0 print:top-0 print:block print:h-[297mm] print:w-[210mm]"
+        className="print-letterhead pointer-events-none hidden print:fixed print:left-0 print:top-0 print:block print:h-[297mm] print:w-[210mm]"
       />
 
       <div className={`relative ${PAGE_HEIGHT} print:min-h-0`}>

@@ -190,6 +190,10 @@
   body {
     background: #fff;
   }
+  /* "Print" is for pre-printed letterhead paper: leave the artwork off, keep the text in place. */
+  html[data-print-mode="plain"] .print-letterhead {
+    display: none !important;
+  }
 }
 
 /* Quotations print on A4 with the letterhead edge to edge */

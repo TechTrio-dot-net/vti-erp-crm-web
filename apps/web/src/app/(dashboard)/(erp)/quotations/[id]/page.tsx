@@ -28,6 +28,25 @@ const STATUS_ACTIONS: Record<QuotationStatus, { label: string; variant: "primary
   cancelled: { label: "Cancel quotation", variant: "danger" },
 };
 
+/**
+ * Open the browser print dialog. "plain" leaves the letterhead artwork off (for pre-printed
+ * letterhead paper); "letterhead" prints it on every page, for "Save as PDF". The page title
+ * becomes the default PDF file name while the dialog is open.
+ */
+function printQuotation(mode: "plain" | "letterhead", number: string) {
+  const root = document.documentElement;
+  const title = document.title;
+  root.dataset.printMode = mode;
+  document.title = mode === "letterhead" ? `Quotation ${number}` : number;
+  const restore = () => {
+    delete root.dataset.printMode;
+    document.title = title;
+    window.removeEventListener("afterprint", restore);
+  };
+  window.addEventListener("afterprint", restore);
+  window.print();
+}
+
 export default function QuotationPage() {
   const { id } = useParams<{ id: string }>()!;
   const router = useRouter();
@@ -107,9 +126,13 @@ export default function QuotationPage() {
               Edit
             </Link>
           )}
-          <Button variant="secondary" size="sm" onClick={() => window.print()}>
+          <Button variant="secondary" size="sm" onClick={() => printQuotation("plain", q.quotation_number)} title="Print on letterhead paper (artwork not printed)">
             <Icon name="printer" className="h-3.5 w-3.5" />
-            Print / Save PDF
+            Print
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => printQuotation("letterhead", q.quotation_number)} title="Save as PDF with the letterhead">
+            <Icon name="download" className="h-3.5 w-3.5" />
+            Save PDF
           </Button>
           {q.can.delete && (
             <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(true)} className="text-ink hover:bg-ink hover:text-paper">
