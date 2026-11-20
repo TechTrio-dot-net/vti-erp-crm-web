@@ -32,7 +32,7 @@ import {
 import { HttpError, isUuid, optionalId, pickColumns, sendError, uuidParam } from '../lib/http';
 import { hashPassword } from '../utils/password';
 import { roleOrPermission } from '../erp/access';
-import { isOpen, leadQuery, startOfTodayLocal } from '../services/leadQueries';
+import { interestedAt, isOpen, leadQuery, startOfTodayLocal } from '../services/leadQueries';
 import { assignLead, assignWaitingLeads, isAssignableBdm, notifyAssignees, transferLeads } from '../services/leadAssignment';
 import { intakeLead } from '../services/leadIntake';
 import { STAGES, logFollowup } from '../services/followups';
@@ -74,6 +74,7 @@ router.get('/leads', async (req: AuthRequest, res) => {
       open: isOpen,
       closed: inArray(leads.stage, [...CLOSED_STAGES]),
       won: eq(leads.stage, 'WON'),
+      interested: eq(leads.stage, 'PROPOSAL'),
       lost: eq(leads.stage, 'LOST'),
       pending: and(isOpen, isNull(leads.firstContactAt)),
       due: and(isOpen, isNotNull(leads.nextFollowupAt), lt(leads.nextFollowupAt, sql`${todayStart} + interval '1 day'`)),
@@ -99,7 +100,7 @@ router.get('/leads', async (req: AuthRequest, res) => {
 
     if (isDateString(q.from) || isDateString(q.to)) {
       const { from, to } = dateRange(q, 30);
-      const column = { assigned: leads.assignedAt, followup: leads.nextFollowupAt, closed: leads.closedAt, contacted: leads.lastContactAt }[
+      const column = { assigned: leads.assignedAt, followup: leads.nextFollowupAt, closed: leads.closedAt, contacted: leads.lastContactAt, interested: interestedAt }[
         String(q.dateField)
       ] ?? leads.createdAt;
       conditions.push(sql`${localDate(column)} BETWEEN ${from} AND ${to}`);
@@ -112,7 +113,9 @@ router.get('/leads', async (req: AuthRequest, res) => {
         ? [sql`${leads.nextFollowupAt} ASC NULLS LAST`, desc(leads.createdAt)]
         : q.sort === 'value'
           ? [desc(leads.estimatedValue)]
-          : [desc(leads.createdAt)];
+          : q.sort === 'interested'
+            ? [sql`${interestedAt} DESC`, desc(leads.createdAt)]
+            : [desc(leads.createdAt)];
 
     const where = and(...conditions);
     const [rows, [{ total }]] = await Promise.all([
@@ -122,6 +125,30 @@ router.get('/leads', async (req: AuthRequest, res) => {
     res.json({ rows, total, page, limit });
   } catch (err) {
     sendError(res, err, 'Failed to fetch leads');
+  }
+});
+
+/** Interested leads counted per day — by the day they turned interested, or the day they came in */
+router.get('/leads/interested-days', async (req: AuthRequest, res) => {
+  try {
+    const q = req.query;
+    const bdm = bdmScope(req, q.bdm);
+    const { from, to } = dateRange(q, 30);
+    const day = localDate(q.by === 'received' ? leads.createdAt : interestedAt);
+    const where = and(
+      eq(leads.stage, 'PROPOSAL'),
+      bdm === 'unassigned' ? isNull(leads.assignedTo) : bdm ? eq(leads.assignedTo, optionalId(bdm, 'bdm')!) : undefined,
+      sql`${day} BETWEEN ${from} AND ${to}`
+    );
+    const rows = await db
+      .select({ day: sql<string>`to_char(${day}, 'YYYY-MM-DD')`, count: count() })
+      .from(leads)
+      .where(where)
+      .groupBy(sql`1`)
+      .orderBy(sql`1 DESC`);
+    res.json({ from, to, days: rows });
+  } catch (err) {
+    sendError(res, err, 'Failed to count interested leads');
   }
 });
 

@@ -6,6 +6,16 @@ import { APP_TIMEZONE, CLOSED_STAGES } from '../lib/crm';
 export const isOpen = notInArray(leads.stage, [...CLOSED_STAGES]);
 export const startOfTodayLocal = sql`(date_trunc('day', now() AT TIME ZONE ${APP_TIMEZONE}) AT TIME ZONE ${APP_TIMEZONE})`;
 
+/**
+ * When the lead turned interested: its first follow-up marked Interested. Leads imported from the old CRM
+ * (or moved to Interested by hand) have no such follow-up, so they fall back to the last contact, then intake.
+ */
+export const interestedAt = sql<string | null>`coalesce(
+  (select min(f.created_at) from lead_followups f where f.lead_id = "leads"."id" and (f.outcome = 'INTERESTED' or f.interested is true)),
+  "leads"."last_contact_at",
+  "leads"."created_at"
+)`;
+
 /** Columns every CRM lead list returns */
 export const leadColumns = {
   id: leads.id,
@@ -40,6 +50,7 @@ export const leadColumns = {
   sampleSharedAt: leads.sampleSharedAt,
   clientId: leads.clientId,
   createdAt: leads.createdAt,
+  interestedAt: sql<Date | null>`${interestedAt}`.mapWith(leads.createdAt),
   pending: sql<boolean>`(${leads.firstContactAt} IS NULL AND ${isOpen})`,
   overdue: sql<boolean>`(${leads.nextFollowupAt} < ${startOfTodayLocal} AND ${isOpen})`,
 };

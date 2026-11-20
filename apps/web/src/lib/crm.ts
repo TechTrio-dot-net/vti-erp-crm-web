@@ -236,6 +236,8 @@ export type CrmLead = {
   lastRemark: string | null;
   sampleSharedAt: string | null;
   createdAt: string;
+  /** When the lead turned interested (first Interested follow-up, else last contact, else intake) */
+  interestedAt?: string | null;
   pending: boolean;
   overdue: boolean;
 };
